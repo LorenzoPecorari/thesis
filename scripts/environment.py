@@ -1,12 +1,12 @@
 import gymnasium
 from gymnasium import spaces
 import numpy as np
-import pandas as pd
+import interpol as ip
 
 import random
 
 class energyEnv(gymnasium.Env):
-    def __init__(self, data, battery_capacity, power_idle, power_frame, delta_time):
+    def __init__(self, data, battery_capacity, power_idle, power_frame, delta_time, proc_interval):
         # irradiation data coming from dataset
         self.data = data
         
@@ -18,10 +18,12 @@ class energyEnv(gymnasium.Env):
         self.e_frame = power_frame * delta_time
         
         self.irrad = 0
-        self.interval = delta_time
+        self.interval = proc_interval
+        self.delta_time = delta_time
         
         # interal vars
         self.current_idx = 0
+        self.inner_idx = 1
         self.action_space = spaces.Discrete(2)
         
         #   AZIONI:
@@ -41,22 +43,19 @@ class energyEnv(gymnasium.Env):
         return self.battery_level, self.irrad, self.e_idle, self.e_frame,  0
     
     def step(self, action):
-        self.current_idx += 1
-        reward = self.calculate_reward(action)
-        done = self.current_idx >= len(self.data - 1)
-        self.irrad = self.data.values[self.current_idx][1]
-        
-        obs = None
-        if(not done):
-            obs = self.data.values[self.current_idx]
+        if(self.inner_idx % (self.delta_time / self.interval) == 0):
+            self.current_idx += 1
+            self.inner_idx = 1
         else:
-            obs = np.zeros(self.observation_space.shape)
+            self.inner_idx +=1
+        
+        reward = self.calculate_reward(action)
+        self.irrad = self.data.values[self.current_idx][1]
             
         return self.battery_level, self.irrad, self.e_idle, self.e_frame,  reward
     
     def update_battery_level(self, value):
-        normalized_value = value / self.battery_capacity
-        # print(f"normalized_value: {normalized_value} - over? {(self.battery_level + normalized_value) > self.battery_capacity}\n")
+        normalized_value = round(value / self.battery_capacity, 1)
         if((self.battery_level + normalized_value) > 1.0):
             self.battery_level = 1.0
         else:
@@ -80,7 +79,8 @@ class energyEnv(gymnasium.Env):
                 return -4
  
 def main():
-    df = pd.read_csv('../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M.csv')
+
+    df = ip.interpolate('../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M.csv', 15, 1)
     df_numeric = df[['dni', 'ghi']]
     
     battery = 0
@@ -90,10 +90,11 @@ def main():
     reward = 0
     partial_reward = 0
 
-    env = energyEnv(df_numeric, 6000, 2.5, 7, 900)
+    env = energyEnv(df_numeric, 6000, 2.5, 7, 900, 10)
     
-    for i in range(10000):
-        battery, irradiation, idle, p, partial_reward = env.step(random.randint(0, 1))
+    for i in range(1000000):
+        # battery, irradiation, idle, p, partial_reward = env.step(0)
+        battery, irradiation, idle, p, partial_reward = env.step(0)
         reward += partial_reward
         print(f"battery: {battery}, irradiation: {irradiation}, idle: {idle}, frame: {p}, reward: {reward}")
 
