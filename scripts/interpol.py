@@ -1,6 +1,9 @@
 import pandas as pd
 
 def interpolate(path, delta, target):
+    delta = delta/60
+    target = target/60
+    
     if(delta < target):
         return None
     

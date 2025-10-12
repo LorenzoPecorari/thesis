@@ -1,8 +1,18 @@
+# gym api
 import gymnasium
 from gymnasium import spaces
+import datetime
+from datetime import timedelta
+
+# numpy numbers management
 import numpy as np
-import interpol as ip
+
+# others
 import random
+import datetime
+
+# custom script
+import interpol as ip
 
 '''
  === Customized environment for energy-aware system with PV ===
@@ -56,12 +66,12 @@ class EnergyPVEnv(gymnasium.Env):
         super().__init__()
         
         # irradiation data coming from dataset
-        self.data = ip.interpolate(datapath, delta_time/60, proc_interval/60)
-        self.max_steps = len(self.data)
-        
+        self.data = ip.interpolate(datapath, delta_time, proc_interval)
+        # self.max_steps = len(self.data)
+
         # battery and system specs
         self.battery_level = 0.0
-        self.battery_capacity = battery_capacity                 # [Wh]
+        self.battery_capacity = battery_capacity                # [Wh]
         
         self.pv_area = pv_area                                  # [m^2]
         self.pv_efficiency = pv_efficiency                      # [Wh/m^2]
@@ -73,19 +83,25 @@ class EnergyPVEnv(gymnasium.Env):
         self.irrad = 0                                          # [W/m^2]
         self.max_irrad = max_irradiation                        # [W/m^2]
         self.interval = proc_interval                           # [s]
-        self.delta_time = delta_time                            # [min]
+        self.delta_time = delta_time                            # [s]
         
         # interal vars
         self.current_step = 0
         self.inner_step = 1
         self.steps_per_interval = int(delta_time / proc_interval)
+        self.steps_per_day = int((24 * 60 * 60) / self.delta_time)
+        self.max_steps = self.steps_per_day
         
         # frames metrics
         self.total_frames_processed = 0
         self.total_frames_dropped = 0
         
+        # temporal metrics
         self.time = 0.0
-        
+        self.year = self.data.index[0].year
+        self.equinox = datetime.datetime(self.year, 3, 20)
+        self.day = datetime.datetime(self.year, 1, 1)
+
         # ACTIONS :
         # 0 -> drop frame
         # 1 -> process frame
@@ -93,8 +109,8 @@ class EnergyPVEnv(gymnasium.Env):
         
         # obs = [battery_level, irradiation, e_idle, e_frame, time_day]        
         self.observation_space = spaces.Box(
-            low = np.array([0.0, 0.0, 0.0]),
-            high = np.array([1.0, 1.0, 1.0]),
+            low = np.array([0.0, 0.0, 0.0, -80]),
+            high = np.array([1.0, 1.0, 1.0, 365]),
             dtype = np.float64
         )
     
@@ -117,19 +133,22 @@ class EnergyPVEnv(gymnasium.Env):
 
         return obs, info
     
+
     def step(self, action):
+        self.inner_step += 1
+        
         if(self.inner_step % self.steps_per_interval == 0):
             self.current_step += 1
-            self.inner_step = 1
-        else:
-            self.inner_step += 1
+            
+            if(self.current_step % self.steps_per_day == 0):
+                self.day += timedelta(1)
         
         self.irrad = self.get_irradiance()
         e_pv = self.get_pv_energy(self.irrad * self.max_irrad)
         
         reward = self.calculate_reward(action, e_pv)
         
-        terminated = (self.current_step >= self.max_steps)
+        terminated = (self.inner_step >= self.max_steps)
         truncated = False
         
         obs = self.get_observation()
@@ -138,10 +157,10 @@ class EnergyPVEnv(gymnasium.Env):
         return obs, reward, terminated, truncated, info
     
     def get_irradiance(self):
-        if(self.current_step >= self.max_steps):
+        if(self.inner_step >= self.max_steps):
             return 0.0
         
-        return round(self.data.iloc[self.current_step]['ghi'] / self.max_irrad, 2)
+        return round(self.data.iloc[self.inner_step]['ghi'] / self.max_irrad, 2)
     
     def get_pv_energy(self, irradiance):
         if(irradiance <= 0.0):
@@ -202,19 +221,20 @@ class EnergyPVEnv(gymnasium.Env):
             'irradiance': self.irrad,
             'battery_level': self.battery_level,
             'battery_wh': self.battery_level * self.battery_capacity,
+            'day': (self.day - self.equinox).days,
             'frames_processed': self.total_frames_processed,
             'frames_dropped': self.total_frames_dropped,
         }
 
     def get_observation(self):
         self.irrad = self.get_irradiance()
-        # time expressed as fraction of day completed wrt delta_time of measurements in dataset
-        self.time = round((self.current_step % self.delta_time) / self.delta_time, 2)
+        self.time = round((self.inner_step % (self.steps_per_interval * self.steps_per_day)) / (self.steps_per_interval * self.steps_per_day), 2)
         
         obs = np.array([
             round(self.battery_level, 2),
             round(self.irrad, 2),
-            round(self.time, 2)            
+            round(self.time, 2),
+            (self.day - self.equinox).days            
         ], dtype=np.float64)
         
         return obs
@@ -222,12 +242,12 @@ class EnergyPVEnv(gymnasium.Env):
  
 def main():
 
-    datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M.csv'
+    datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
     battery_capacity = 100                  # [Wh]
     power_idle = 2.5                        # [W]
     power_frame = 7.0                       # [W]
-    delta_time = 15 * 60            # [sec]
-    proc_interval = 1 * 60      # [sec]
+    delta_time = 15 * 60                    # [sec]
+    proc_interval = 5 * 60                  # [sec]
     max_irrad = 1200                        # [W/m^2]
     pv_efficiency = 0.2
     pv_area = 1.0
@@ -253,5 +273,6 @@ def main():
         
         obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward
-        print(f"action: {action}, battery: {obs[0]}, irrad: {obs[1]}, time: {obs[2]}")
+        print(f"action: {action}, battery: {obs[0]}, irrad: {obs[1]}, time: {obs[2]}, day: {obs[3]}")
         
+main()
