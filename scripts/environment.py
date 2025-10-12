@@ -67,7 +67,6 @@ class EnergyPVEnv(gymnasium.Env):
         
         # irradiation data coming from dataset
         self.data = ip.interpolate(datapath, delta_time, proc_interval)
-        # self.max_steps = len(self.data)
 
         # battery and system specs
         self.battery_level = 0.0
@@ -87,10 +86,11 @@ class EnergyPVEnv(gymnasium.Env):
         
         # interal vars
         self.current_step = 0
-        self.inner_step = 1
+        self.inner_step = 0
         self.steps_per_interval = int(delta_time / proc_interval)
-        self.steps_per_day = int((24 * 60 * 60) / self.delta_time)
-        self.max_steps = self.steps_per_day
+        self.steps_per_day_data = int((24 * 60 * 60) / proc_interval)
+        self.steps_per_day_logic = int((24 * 60 * 60) / delta_time)
+        self.max_steps = self.steps_per_day_data
         
         # frames metrics
         self.total_frames_processed = 0
@@ -100,7 +100,8 @@ class EnergyPVEnv(gymnasium.Env):
         self.time = 0.0
         self.year = self.data.index[0].year
         self.equinox = datetime.datetime(self.year, 3, 20)
-        self.day = datetime.datetime(self.year, 1, 1)
+        self.day = 0
+
 
         # ACTIONS :
         # 0 -> drop frame
@@ -118,8 +119,10 @@ class EnergyPVEnv(gymnasium.Env):
         if(seed == None):
             super().reset()
         else:
-            super.reset(seed)
+            super().reset(seed)
         
+        
+        self.day = random.randint((datetime.datetime(self.year, 1, 1) - self.equinox).days, (datetime.datetime(self.year, 12, 31) - self.equinox).days)
         self.battery_level = 0.5
         self.inner_step = 0
         self.current_step = 0
@@ -140,8 +143,8 @@ class EnergyPVEnv(gymnasium.Env):
         if(self.inner_step % self.steps_per_interval == 0):
             self.current_step += 1
             
-            if(self.current_step % self.steps_per_day == 0):
-                self.day += timedelta(1)
+            if(self.current_step % self.steps_per_day_logic == 0):
+                self.day += 1
         
         self.irrad = self.get_irradiance()
         e_pv = self.get_pv_energy(self.irrad * self.max_irrad)
@@ -160,7 +163,15 @@ class EnergyPVEnv(gymnasium.Env):
         if(self.inner_step >= self.max_steps):
             return 0.0
         
-        return round(self.data.iloc[self.inner_step]['ghi'] / self.max_irrad, 2)
+        equinox_day_of_year = (self.equinox - datetime.datetime(self.year, 1, 1)).days
+        day_of_year = equinox_day_of_year + self.day
+        
+        idx = day_of_year * self.steps_per_day_data + self.inner_step
+        
+        if idx < 0 or idx >= len(self.data):
+            return 0.0
+        
+        return round(self.data.iloc[idx]['ghi'] / self.max_irrad, 2)
     
     def get_pv_energy(self, irradiance):
         if(irradiance <= 0.0):
@@ -221,20 +232,20 @@ class EnergyPVEnv(gymnasium.Env):
             'irradiance': self.irrad,
             'battery_level': self.battery_level,
             'battery_wh': self.battery_level * self.battery_capacity,
-            'day': (self.day - self.equinox).days,
+            'day': self.day,
             'frames_processed': self.total_frames_processed,
             'frames_dropped': self.total_frames_dropped,
         }
 
     def get_observation(self):
         self.irrad = self.get_irradiance()
-        self.time = round((self.inner_step % (self.steps_per_interval * self.steps_per_day)) / (self.steps_per_interval * self.steps_per_day), 2)
+        self.time = round(self.inner_step / self.steps_per_day_data, 2)
         
         obs = np.array([
             round(self.battery_level, 2),
             round(self.irrad, 2),
             round(self.time, 2),
-            (self.day - self.equinox).days            
+            self.day          
         ], dtype=np.float64)
         
         return obs
@@ -267,12 +278,16 @@ def main():
     obs, info = env.reset(None)
     total_reward = 0
     
-    for i in range(100000):
-        # action = 1
-        action = random.randint(0, 1)
-        
-        obs, reward, terminated, truncated, info = env.step(action)
-        total_reward += reward
-        print(f"action: {action}, battery: {obs[0]}, irrad: {obs[1]}, time: {obs[2]}, day: {obs[3]}")
+    for i in range(5):
+        print(info)
+        for j in range(500):
+            print(obs)
+            print()
+
+            obs = env.step(0)
+
+        obs, info = env.reset(None)
+
+
         
 main()
