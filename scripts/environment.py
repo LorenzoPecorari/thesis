@@ -115,7 +115,7 @@ class EnergyPVEnv(gymnasium.Env):
             dtype = np.float64
         )
     
-    def reset(self, seed):
+    def reset(self, seed=None):
         if(seed == None):
             super().reset()
         else:
@@ -251,43 +251,39 @@ class EnergyPVEnv(gymnasium.Env):
         return obs
         
  
-def main():
+# def main():
 
-    datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
-    battery_capacity = 100                  # [Wh]
-    power_idle = 2.5                        # [W]
-    power_frame = 7.0                       # [W]
-    delta_time = 15 * 60                    # [sec]
-    proc_interval = 5 * 60                  # [sec]
-    max_irrad = 1200                        # [W/m^2]
-    pv_efficiency = 0.2
-    pv_area = 1.0
+#     datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
+#     battery_capacity = 100                  # [Wh]
+#     power_idle = 2.5                        # [W]
+#     power_frame = 7.0                       # [W]
+#     delta_time = 15 * 60                    # [sec]
+#     proc_interval = 5 * 60                  # [sec]
+#     max_irrad = 1200                        # [W/m^2]
+#     pv_efficiency = 0.2
+#     pv_area = 1.0
 
-    env = EnergyPVEnv(
-        datapath,
-        battery_capacity,
-        power_idle,
-        power_frame,
-        delta_time,
-        proc_interval,
-        max_irrad,
-        pv_efficiency,
-        pv_area
-    )
+#     env = EnergyPVEnv(
+#         datapath,
+#         battery_capacity,
+#         power_idle,
+#         power_frame,
+#         delta_time,
+#         proc_interval,
+#         max_irrad,
+#         pv_efficiency,
+#         pv_area
+#     )
     
-    obs, info = env.reset(None)
-    total_reward = 0
+#     obs, info = env.reset(None)
+#     total_reward = 0
     
-    for i in range(5):
-        print(info)
-        for j in range(500):
-            print(obs)
-            print()
+#     for i in range(5):
+#         print(info)
+#         for j in range(500):
+#             print(obs)
+#             print()
 
-            obs = env.step(0)
+#             obs = env.step(0)
 
-        obs, info = env.reset(None)
-
-
-        
-main()
+#         obs, info = env.reset(None)
