@@ -25,7 +25,7 @@ Each status is represented as:
 where each variable is normalized over the range [0, 1].
 
 It is needed to provide to the environment :
- - the path of a dataset of data related to irradiance measurements (coming from a source like Solcast),
+ - the path of a dataset of data related to irradiance measurements (coming from Solcast),
  - the nominal capacity of the battery,
  - the power at idle and the avg needed for computing a frame,
  - the frequency of measurements and the desired computational frequency in seconds,
@@ -41,12 +41,12 @@ It is needed to provide to the environment :
             if (not enough energy for processing)
                 reward = +1
             else
-                reward = -3
+                reward = 0
         else if (action == PROCESS)
-            if (enough energy for processing frame)
+            if (enough energy for processing batch of frames)
                 reward = +1
             else
-                reward = -5
+                reward = 0
     
 '''
 
@@ -61,7 +61,8 @@ class EnergyPVEnv(gymnasium.Env):
                  proc_interval,
                  max_irradiation,
                  pv_efficiency,
-                 pv_area):
+                 pv_area,
+                 fps):
         
         super().__init__()
         
@@ -77,13 +78,17 @@ class EnergyPVEnv(gymnasium.Env):
         
         # energy params
         self.e_idle = (power_idle * proc_interval) / 3600       # [Wh]
-        self.e_frame = (power_frame * proc_interval) / 3600     # [Wh]
+        self.e_frame = (power_frame) / 3600                     # [Wh] per singolo frame
         
         self.irrad = 0                                          # [W/m^2]
         self.max_irrad = max_irradiation                        # [W/m^2]
         self.interval = proc_interval                           # [s]
         self.delta_time = delta_time                            # [s]
-        
+        self.fps = fps                                          # [1/s]
+
+        # value of images to process in batch
+        self.frames_per_interval = int(fps * proc_interval)
+
         # interal vars
         self.current_step = 0
         self.inner_step = 0
@@ -108,21 +113,22 @@ class EnergyPVEnv(gymnasium.Env):
         # 1 -> process frame
         self.action_space = spaces.Discrete(2)
         
-        # obs = [battery_level, irradiation, e_idle, e_frame, time_day]        
+        # obs = [battery_level, time_day]        
         self.observation_space = spaces.Box(
-            low = np.array([0.0, 0.0, 0.0, -80]),
-            high = np.array([1.0, 1.0, 1.0, 365]),
+            low = np.array([0.0, 0.0]),
+            high = np.array([1.0, 1.0]),
             dtype = np.float64
         )
     
-    def reset(self, seed=None):
+    def reset(self, seed=None, **kwargs):
         if(seed == None):
+            super().reset(seed = seed)
+            self.day = random.randint((datetime.datetime(self.year, 1, 1) - self.equinox).days, (datetime.datetime(self.year, 12, 31) - self.equinox).days)
+        
+        elif(seed == "linear"):
             super().reset()
-        else:
-            super().reset(seed)
+            self.day += 1
         
-        
-        self.day = random.randint((datetime.datetime(self.year, 1, 1) - self.equinox).days, (datetime.datetime(self.year, 12, 31) - self.equinox).days)
         self.battery_level = 0.5
         self.inner_step = 0
         self.current_step = 0
@@ -194,35 +200,35 @@ class EnergyPVEnv(gymnasium.Env):
     def calculate_reward(self, action, panel_energy):
         
         actual_battery_energy = self.battery_level * self.battery_capacity
-        needed_energy = (self.e_frame + self.e_idle)
+
+        # energy for all the images of the batch        
+        energy_for_frames = self.e_frame * self.frames_per_interval
+        needed_energy = energy_for_frames + self.e_idle
+        
         available_energy = actual_battery_energy + panel_energy
         
         reward = 0
         
-        # action is "drop the frame"
+        # action is "drop the frames batch"
         if(action == 0):
-            self.total_frames_dropped += 1
+            self.total_frames_dropped += self.frames_per_interval
 
             if(available_energy < needed_energy):
                 self.update_battery_level(panel_energy - self.e_idle)
                 reward = 1
             else:
-                # it should have processed the frame
-                # thanks to enough energy in the battery, weak penalty
                 self.update_battery_level(panel_energy - self.e_idle)
-                reward = -3     
+                reward = 0     
         
-        # action is "process the frame"
+        # action is "process the frames batch"
         elif(action == 1):
             if(available_energy < needed_energy):
-                # it should have dropped the frame
-                # due to unsufficient energy in the battery, strong penalty
                 self.update_battery_level(panel_energy - needed_energy)
                 reward = 0
             else:
                 self.update_battery_level(panel_energy - needed_energy)
-                self.total_frames_processed += 1
-                reward = -5
+                self.total_frames_processed += self.frames_per_interval
+                reward = 1
         
         return reward
 
@@ -235,6 +241,7 @@ class EnergyPVEnv(gymnasium.Env):
             'day': self.day,
             'frames_processed': self.total_frames_processed,
             'frames_dropped': self.total_frames_dropped,
+            'frames_per_interval': self.frames_per_interval,
         }
 
     def get_observation(self):
@@ -243,47 +250,7 @@ class EnergyPVEnv(gymnasium.Env):
         
         obs = np.array([
             round(self.battery_level, 2),
-            round(self.irrad, 2),
-            round(self.time, 2),
-            self.day          
+            round(self.time, 2)
         ], dtype=np.float64)
         
         return obs
-        
- 
-# def main():
-
-#     datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
-#     battery_capacity = 100                  # [Wh]
-#     power_idle = 2.5                        # [W]
-#     power_frame = 7.0                       # [W]
-#     delta_time = 15 * 60                    # [sec]
-#     proc_interval = 5 * 60                  # [sec]
-#     max_irrad = 1200                        # [W/m^2]
-#     pv_efficiency = 0.2
-#     pv_area = 1.0
-
-#     env = EnergyPVEnv(
-#         datapath,
-#         battery_capacity,
-#         power_idle,
-#         power_frame,
-#         delta_time,
-#         proc_interval,
-#         max_irrad,
-#         pv_efficiency,
-#         pv_area
-#     )
-    
-#     obs, info = env.reset(None)
-#     total_reward = 0
-    
-#     for i in range(5):
-#         print(info)
-#         for j in range(500):
-#             print(obs)
-#             print()
-
-#             obs = env.step(0)
-
-#         obs, info = env.reset(None)

@@ -2,24 +2,26 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 from stable_baselines3 import DQN
-import environment
+import environment_simplified
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 # env params
 datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
-#datapath_2 = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
-battery_capacity = 600                # [Wh]
+# datapath_2 = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
+battery_capacity = 600                 # [Wh]
 power_idle = 0.0                        # [W]
 power_frame = 10.0                       # [W]
 delta_time = 15 * 60                    # [sec]
-proc_interval = 1 * 60                  # [sec]
+proc_interval = 15 * 60                  # [sec]
 max_irrad = 1200                        # [W/m^2]
 pv_efficiency = 0.2
 pv_area = 1.0
+fps = 30
+seed = "linear"
 
-env = environment.EnergyPVEnv(
+env = environment_simplified.EnergyPVEnv(
         datapath,
         battery_capacity,
         power_idle,
@@ -28,9 +30,10 @@ env = environment.EnergyPVEnv(
         proc_interval,
         max_irrad,
         pv_efficiency,
-        pv_area
+        pv_area,
+        fps
     )
-env.reset(None)
+env.reset(seed)
 print("env done!")
 
 # env2 = environment.EnergyPVEnv(
@@ -60,15 +63,15 @@ model = DQN("MlpPolicy",
             )
 
 model.learn(total_timesteps=100000)
-model.save("dqn_energy_pv")
+model.save("dqn_energy_pv_s")
 
-model = DQN.load("dqn_energy_pv")
+model = DQN.load("dqn_energy_pv_s")
 
 rewards_env = []
 
 # train over first dataset
 for j in range(300):
-    obs, info = env.reset(None)
+    obs, info = env.reset(seed)
     reward = 0
     partial_reward = 0
 
@@ -103,7 +106,7 @@ plt.xlabel("Episodes")
 plt.ylabel("Rewards")
 plt.grid()
 plt.plot(rewards_env)
-plt.savefig("rewards_plot_simplified_300_ep.pdf")
+plt.savefig("rewards_plot_simplified.pdf")
 
 # plt.plot(range(window - 1, len(rewards_env2)), np.convolve(rewards_env2, np.ones(window)/window, mode='valid'), label = "Env 2023")
 # plt.legend()
