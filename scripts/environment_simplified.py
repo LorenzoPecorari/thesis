@@ -3,6 +3,9 @@ import gymnasium
 from gymnasium import spaces
 import datetime
 from datetime import timedelta
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
 
 # numpy numbers management
 import numpy as np
@@ -67,6 +70,7 @@ class EnergyPVEnv(gymnasium.Env):
         super().__init__()
         
         # irradiation data coming from dataset
+        self.datapath = datapath
         self.data = ip.interpolate(datapath, delta_time, proc_interval)
 
         # battery and system specs
@@ -170,7 +174,7 @@ class EnergyPVEnv(gymnasium.Env):
             return 0.0
         
         equinox_day_of_year = (self.equinox - datetime.datetime(self.year, 1, 1)).days
-        day_of_year = equinox_day_of_year + self.day
+        day_of_year = (equinox_day_of_year + self.day) % 365
         
         idx = day_of_year * self.steps_per_day_data + self.inner_step
         
@@ -224,6 +228,7 @@ class EnergyPVEnv(gymnasium.Env):
         elif(action == 1):
             if(available_energy < needed_energy):
                 self.update_battery_level(panel_energy - needed_energy)
+                self.total_frames_dropped += self.frames_per_interval
                 reward = 0
             else:
                 self.update_battery_level(panel_energy - needed_energy)
