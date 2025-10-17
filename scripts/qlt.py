@@ -48,6 +48,7 @@ class Agent:
         self.eps_dec = eps_dec
         self.eps = eps_init
         self.episodes = episodes
+        self.battery_capacity = battery_capacity
         
         # 3d table, |battery_levls| x |time_levels| x |actions|
         self.table = np.zeros((battery_bins, time_bins, 2))
@@ -84,12 +85,17 @@ class Agent:
         processed_frames = []
         battery = []
         irradiance = []
+        cumulative_traces = []
+        battery_traces = []
 
-        for i in range(self.episodes):
+        for i in range(self.episodes + 1):
             state, _ = self.env.reset(self.seed)
             partial_reward = 0
             battery_avg = 0
             avg_irrad = 0
+            battery = []
+            
+            trace = []
             info = {}
 
             self.update_eps()            
@@ -102,18 +108,61 @@ class Agent:
                 self.update_table(state, new_state, action, reward)
                 partial_reward += reward
                 state = new_state
+                battery.append(info['battery_level'] * self.battery_capacity)
                 battery_avg += info['battery_level']
                 avg_irrad += info['irradiance']
+                trace.append(partial_reward)
             
-            print(f"episode: {i}/{self.episodes} - reward: {partial_reward}")
+            if(i % 50 == 0):
+                cumulative_traces.append(trace)
+                battery_traces.append(battery)
+            
+            print(f"episode: {i}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
             dropped_frames.append(info['frames_dropped'])
             processed_frames.append(info['frames_processed'])
             battery.append(battery_avg / self.env.max_steps)
             irradiance.append(avg_irrad / self.env.max_steps)
             
             rewards.append(partial_reward)
+        
+        self.plot_cumulative_trace(cumulative_traces)
+        self.plot_daily_battery(battery_traces)
 
         return rewards, dropped_frames, processed_frames, battery, irradiance
+
+    ### daily metrics
+
+    def plot_cumulative_trace(self, data):
+        plt.title("Q-Learning tabular - Cumulative rewards")
+        plt.xlabel("Step")
+        plt.ylabel("Reward")
+        
+        for i in range(len(data)):
+            plt.plot(data[i], label = f"{str(i*50)}-th episode")
+        
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
+        plt.tight_layout()
+        plt.savefig("cumulative_rewards_qlt.pdf")
+        plt.close()    
+            
+    def plot_daily_battery(self, data):
+        plt.title("Q-Learning tabular - Daily battery")
+        plt.xlabel("Step")
+        plt.ylabel("Battery")
+        
+        for i in range(len(data)):
+            plt.plot(data[i], label = f"{str(i*50)}-th battery" )
+        
+        plt.grid()
+        plt.legend()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
+        plt.tight_layout()
+        plt.savefig("battery_daily_qlt.pdf")
+        plt.close()  
+        
+            
+    ### training metrics
 
     def plot_rewards(self, data):
         window = 10
@@ -172,29 +221,49 @@ class Agent:
         plt.legend()
         plt.savefig("irradiance_plot.pdf")
         plt.close()
-
+        
+        
 ############################################################################################
 
+### main
+
+'''
+    n    |   eps_dec |   eps_0 | eps_n
+   ------------------------------------
+    29   |  0.90     |   1.0   | 0.05
+    32   |  0.91
+    36   |  0.92
+    42   |  0.93
+    49   |  0.94
+    59   |  0.95
+    74   |  0.96
+    99   |  0.97
+    149  |  0.98
+    299  |  0.99
+
+'''
+
+
 datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
-battery_capacity = 6000               # [Wh]
+battery_capacity = 600000               # [Wh]
 power_idle = 0.0                        # [W]
 power_frame = 5.0                       # [W]
 delta_time = 15 * 60                    # [sec]
 proc_interval = 15 * 60                  # [sec]                     # [W/m^2]
 pv_efficiency = 0.2
 pv_area = 1.0
-fps = 30
+fps = 15
 seed = "linear"
 max_irradiation = 1200
 
-battery_bins = 11
-time_bins = 11
-alpha = 0.1
+battery_bins = 10
+time_bins = 10
+alpha = 0.05
 gamma = 0.9
 eps_min = 0.05
-eps_dec = 0.3
+eps_dec = 0.97
 eps_init = 1.0
-episodes = 350
+episodes = 360
 
 
 agent = Agent(
@@ -224,4 +293,4 @@ results = agent.train()
 agent.plot_rewards(results[0])
 agent.plot_frames(results[1], results[2])
 agent.plot_battery(results[3])
-agent.plot_irradiance(results[4])
+# agent.plot_irradiance(results[4])

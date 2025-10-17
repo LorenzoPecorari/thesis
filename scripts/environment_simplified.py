@@ -117,7 +117,6 @@ class EnergyPVEnv(gymnasium.Env):
         # 1 -> process frame
         self.action_space = spaces.Discrete(2)
         
-        # obs = [battery_level, time_day]        
         self.observation_space = spaces.Box(
             low = np.array([0.0, 0.0]),
             high = np.array([1.0, 1.0]),
@@ -131,7 +130,7 @@ class EnergyPVEnv(gymnasium.Env):
         
         elif(seed == "linear"):
             super().reset()
-            self.day += 1
+            self.day = (self.day + 1) % 365
         
         self.battery_level = 0.5
         self.inner_step = 0
@@ -227,7 +226,7 @@ class EnergyPVEnv(gymnasium.Env):
         # action is "process the frames batch"
         elif(action == 1):
             if(available_energy < needed_energy):
-                self.update_battery_level(panel_energy - needed_energy)
+                self.update_battery_level(panel_energy - self.e_idle)
                 self.total_frames_dropped += self.frames_per_interval
                 reward = 0
             else:
