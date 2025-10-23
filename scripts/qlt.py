@@ -54,10 +54,17 @@ class Agent:
         self.table = np.zeros((battery_bins, time_bins, 2))
 
     def choice_action(self, state, eps):
+        # b_idx, t_idx = self.state_discretization(state[0], state[1])
+        
+        b_idx, t_idx = state[0], state[1]
+        
+        print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
         if np.random.random() < eps:
+            print("RANDOM")
             return random.randint(0, 1)
         else:
-            return np.argmax(self.table[state[0], state[1]])
+            print("DECIDED")
+            return np.argmax(self.table[b_idx, t_idx])
         
     def state_discretization(self, b, t):
         battery_idx = int(b * self.battery_bins)
@@ -77,7 +84,10 @@ class Agent:
     def update_table(self, state, next_state, action, reward):
         b_idx, t_idx = self.state_discretization(state[0], state[1])
         next_b_idx, next_t_idx = self.state_discretization(next_state[0], next_state[1])
+        
+        print(f"\n State of Q({b_idx}, {t_idx}, {action}): {self.table[b_idx, t_idx, action]} -> ", end="")
         self.table[b_idx, t_idx, action] = (1 - self.alpha) * self.table[b_idx, t_idx, action] + (self.alpha * (reward + (self.gamma * np.max(self.table[next_b_idx, next_t_idx]))))
+        print(f"{self.table[b_idx, t_idx, action]}")
     
     def train(self):
         rewards = []
@@ -88,7 +98,7 @@ class Agent:
         cumulative_traces = []
         battery_traces = []
 
-        for i in range(self.episodes + 1):
+        for episode in range(self.episodes + 1):
             state, _ = self.env.reset(self.seed)
             partial_reward = 0
             battery_avg = 0
@@ -103,6 +113,12 @@ class Agent:
             for j in range(self.env.max_steps):
                 state = self.state_discretization(state[0], state[1])
                 action = self.choice_action(state, self.eps)
+                
+                if(action == 0):
+                    print("Action chosen: DROP")
+                else:
+                    print("Action chosen: PROCESS")
+                
                 new_state, reward, terminated, truncated, info = self.env.step(action)
 
                 self.update_table(state, new_state, action, reward)
@@ -113,17 +129,21 @@ class Agent:
                 avg_irrad += info['irradiance']
                 trace.append(partial_reward)
             
-            if(i % 50 == 0):
+            if(episode % 50 == 0):
                 cumulative_traces.append(trace)
                 battery_traces.append(battery)
             
-            print(f"episode: {i}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
+            print(f"episode: {episode}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
+            print(f"dropped: {info['frames_dropped']} - processed : {info['frames_processed']} - avg battery : {battery_avg / self.env.max_steps} - avg irradiance: {avg_irrad / self.env.max_steps}")
             dropped_frames.append(info['frames_dropped'])
             processed_frames.append(info['frames_processed'])
             battery.append(battery_avg / self.env.max_steps)
             irradiance.append(avg_irrad / self.env.max_steps)
             
+            self.save_table(episode)
+            
             rewards.append(partial_reward)
+            # input("Press enter to continue...")
         
         self.plot_cumulative_trace(cumulative_traces)
         self.plot_daily_battery(battery_traces)
@@ -186,7 +206,7 @@ class Agent:
         plt.ylabel("Frames")
         
         plt.plot(range(window - 1, len(dropped)), np.convolve(dropped, np.ones(window)/window, mode='valid'), label = "smoothened dropped", alpha = 1.0)
-        plt.plot(dropped, label = "raw processed", alpha = 0.3)
+        plt.plot(dropped, label = "raw dropped", alpha = 0.3)
         plt.plot(range(window - 1, len(processed)), np.convolve(processed, np.ones(window)/window, mode='valid'), label = "smoothened processed", alpha = 1.0)
         plt.plot(processed, label = "raw processed", alpha = 0.3)
         
@@ -222,6 +242,27 @@ class Agent:
         plt.savefig("irradiance_plot.pdf")
         plt.close()
         
+    def save_table(self, episode):
+        array_drop = []
+        for i in range(battery_bins):
+            row = []
+            for j in range(time_bins):
+                row.append(self.table[i, j, 0])
+            array_drop.append(row)
+            
+        array = np.array(array_drop)
+        np.savetxt(f'./table_saves/table_ep{episode}_DROP.csv', array, delimiter=",")
+        
+        array_process = []
+        for i in range(battery_bins):
+            row = []
+            for j in range(time_bins):
+                row.append(self.table[i, j, 1])
+            array_process.append(row)
+            
+        array = np.array(array_process)
+        np.savetxt(f'./table_saves/table_ep{episode}_PROCESS.csv', array, delimiter=",")
+        
         
 ############################################################################################
 
@@ -249,7 +290,7 @@ battery_capacity = 600000               # [Wh]
 power_idle = 0.0                        # [W]
 power_frame = 5.0                       # [W]
 delta_time = 15 * 60                    # [sec]
-proc_interval = 15 * 60                  # [sec]                     # [W/m^2]
+proc_interval = 15 * 60                 # [sec]                     
 pv_efficiency = 0.2
 pv_area = 1.0
 fps = 15

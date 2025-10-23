@@ -226,7 +226,7 @@ class EnergyPVEnv(gymnasium.Env):
         # action is "process the frames batch"
         elif(action == 1):
             if(available_energy < needed_energy):
-                self.update_battery_level(panel_energy - self.e_idle)
+                self.update_battery_level(panel_energy - needed_energy)
                 self.total_frames_dropped += self.frames_per_interval
                 reward = 0
             else:
