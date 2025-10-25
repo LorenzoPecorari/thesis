@@ -54,16 +54,14 @@ class Agent:
         self.table = np.zeros((battery_bins, time_bins, 2))
 
     def choice_action(self, state, eps):
-        # b_idx, t_idx = self.state_discretization(state[0], state[1])
+        b_idx, t_idx = self.state_discretization(state[0], state[1])
         
-        b_idx, t_idx = state[0], state[1]
-        
-        print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
+        # print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
         if np.random.random() < eps:
-            print("RANDOM")
+            # print("RANDOM")
             return random.randint(0, 1)
         else:
-            print("DECIDED")
+            # print("DECIDED")
             return np.argmax(self.table[b_idx, t_idx])
         
     def state_discretization(self, b, t):
@@ -85,9 +83,9 @@ class Agent:
         b_idx, t_idx = self.state_discretization(state[0], state[1])
         next_b_idx, next_t_idx = self.state_discretization(next_state[0], next_state[1])
         
-        print(f"\n State of Q({b_idx}, {t_idx}, {action}): {self.table[b_idx, t_idx, action]} -> ", end="")
+        # print(f"\n State of Q({b_idx}, {t_idx}, {action}): {self.table[b_idx, t_idx, action]} -> ", end="")
         self.table[b_idx, t_idx, action] = (1 - self.alpha) * self.table[b_idx, t_idx, action] + (self.alpha * (reward + (self.gamma * np.max(self.table[next_b_idx, next_t_idx]))))
-        print(f"{self.table[b_idx, t_idx, action]}")
+        # print(f"{self.table[b_idx, t_idx, action]}")
     
     def train(self):
         rewards = []
@@ -114,11 +112,6 @@ class Agent:
                 state = self.state_discretization(state[0], state[1])
                 action = self.choice_action(state, self.eps)
                 
-                if(action == 0):
-                    print("Action chosen: DROP")
-                else:
-                    print("Action chosen: PROCESS")
-                
                 new_state, reward, terminated, truncated, info = self.env.step(action)
 
                 self.update_table(state, new_state, action, reward)
@@ -134,13 +127,13 @@ class Agent:
                 battery_traces.append(battery)
             
             print(f"episode: {episode}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
-            print(f"dropped: {info['frames_dropped']} - processed : {info['frames_processed']} - avg battery : {battery_avg / self.env.max_steps} - avg irradiance: {avg_irrad / self.env.max_steps}")
+            # print(f"dropped: {info['frames_dropped']} - processed : {info['frames_processed']} - avg battery : {battery_avg / self.env.max_steps} - avg irradiance: {avg_irrad / self.env.max_steps}")
             dropped_frames.append(info['frames_dropped'])
             processed_frames.append(info['frames_processed'])
             battery.append(battery_avg / self.env.max_steps)
             irradiance.append(avg_irrad / self.env.max_steps)
             
-            self.save_table(episode)
+            # self.save_table(episode)
             
             rewards.append(partial_reward)
             # input("Press enter to continue...")
@@ -286,14 +279,14 @@ class Agent:
 
 
 datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
-battery_capacity = 600000               # [Wh]
+battery_capacity = 6000               # [Wh]
 power_idle = 0.0                        # [W]
 power_frame = 5.0                       # [W]
 delta_time = 15 * 60                    # [sec]
-proc_interval = 15 * 60                 # [sec]                     
+proc_interval = (1/12) * 60                 # [sec]                     
 pv_efficiency = 0.2
 pv_area = 1.0
-fps = 15
+fps = 30
 seed = "linear"
 max_irradiation = 1200
 
@@ -304,7 +297,7 @@ gamma = 0.9
 eps_min = 0.05
 eps_dec = 0.97
 eps_init = 1.0
-episodes = 360
+episodes = 365
 
 
 agent = Agent(
