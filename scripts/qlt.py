@@ -138,8 +138,8 @@ class Agent:
             rewards.append(partial_reward)
             # input("Press enter to continue...")
         
-        self.plot_cumulative_trace(cumulative_traces)
-        self.plot_daily_battery(battery_traces)
+        # self.plot_cumulative_trace(cumulative_traces)
+        # self.plot_daily_battery(battery_traces)
 
         return rewards, dropped_frames, processed_frames, battery, irradiance
 
@@ -235,31 +235,30 @@ class Agent:
         plt.savefig("irradiance_plot.pdf")
         plt.close()
         
-    def save_table(self, episode):
-        array_drop = []
-        for i in range(battery_bins):
-            row = []
-            for j in range(time_bins):
-                row.append(self.table[i, j, 0])
-            array_drop.append(row)
+    # def save_table(self, episode, battery_bins, time_bins):
+    #     array_drop = []
+    #     for i in range(battery_bins):
+    #         row = []
+    #         for j in range(time_bins):
+    #             row.append(self.table[i, j, 0])
+    #         array_drop.append(row)
             
-        array = np.array(array_drop)
-        np.savetxt(f'./table_saves/table_ep{episode}_DROP.csv', array, delimiter=",")
+    #     array = np.array(array_drop)
+    #     np.savetxt(f'./table_saves/table_ep{episode}_DROP.csv', array, delimiter=",")
         
-        array_process = []
-        for i in range(battery_bins):
-            row = []
-            for j in range(time_bins):
-                row.append(self.table[i, j, 1])
-            array_process.append(row)
+    #     array_process = []
+    #     for i in range(battery_bins):
+    #         row = []
+    #         for j in range(time_bins):
+    #             row.append(self.table[i, j, 1])
+    #         array_process.append(row)
             
-        array = np.array(array_process)
-        np.savetxt(f'./table_saves/table_ep{episode}_PROCESS.csv', array, delimiter=",")
+    #     array = np.array(array_process)
+    #     np.savetxt(f'./table_saves/table_ep{episode}_PROCESS.csv', array, delimiter=",")
         
         
 ############################################################################################
 
-### main
 
 '''
     n    |   eps_dec |   eps_0 | eps_n
@@ -276,55 +275,3 @@ class Agent:
     299  |  0.99
 
 '''
-
-
-datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
-battery_capacity = 6000               # [Wh]
-power_idle = 0.0                        # [W]
-power_frame = 5.0                       # [W]
-delta_time = 15 * 60                    # [sec]
-proc_interval = (1/12) * 60                 # [sec]                     
-pv_efficiency = 0.2
-pv_area = 1.0
-fps = 30
-seed = "linear"
-max_irradiation = 1200
-
-battery_bins = 10
-time_bins = 10
-alpha = 0.05
-gamma = 0.9
-eps_min = 0.05
-eps_dec = 0.97
-eps_init = 1.0
-episodes = 365
-
-
-agent = Agent(
-                datapath,
-                 battery_capacity,
-                 power_idle,
-                 power_frame,
-                 delta_time,
-                 proc_interval,
-                 max_irradiation,
-                 pv_efficiency,
-                 pv_area,
-                 fps,
-                 seed,
-                 battery_bins,
-                 time_bins,
-                 alpha,
-                 gamma,
-                 eps_min,
-                 eps_dec,
-                 eps_init,
-                 episodes
-)
-
-results = agent.train()
-
-agent.plot_rewards(results[0])
-agent.plot_frames(results[1], results[2])
-agent.plot_battery(results[3])
-# agent.plot_irradiance(results[4])
