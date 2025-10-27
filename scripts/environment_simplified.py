@@ -35,21 +35,31 @@ It is needed to provide to the environment :
  - an estimation of the maximum irradiance reachable,
  - the efficiency and the area of the photovoltaic panel.
  
- For now, only two actions are availables: DROP and PROCESS; both identified as 0 and 1.
+ For now, only three actions are availables: DROP, PROCESS, STORE; all identified as 0, 1 and 2.
  
  The reward function defined is the following:
-    let A = {DROP, PROCESS}
+    let A = {DROP, PROCESS, STORE}
+    
     if action belongs to A, so:
         if (action == DROP)
-            if (not enough energy for processing)
+            if (not enough energy for processing and storage is full)
                 reward = +1
             else
                 reward = 0
+        
         else if (action == PROCESS)
             if (enough energy for processing batch of frames)
                 reward = +1
+
+                if(enough energy to process other frames and storage not empty)
+                    process the predicted frames
             else
                 reward = 0
+                
+        else if (action == STORE)
+            if(not enough energy for process and storage is not empty)
+                store frames
+                reward = +1
     
 '''
 
@@ -58,6 +68,7 @@ class EnergyPVEnv(gymnasium.Env):
     def __init__(self, 
                  datapath,
                  battery_capacity,
+                 storage_capacity,
                  power_idle,
                  power_frame,
                  delta_time,
@@ -76,6 +87,9 @@ class EnergyPVEnv(gymnasium.Env):
         # battery and system specs
         self.battery_level = 0.0
         self.battery_capacity = battery_capacity                # [Wh]
+        
+        self.storage = 0
+        self.storage_capacity = storage_capacity
         
         self.pv_area = pv_area                                  # [m^2]
         self.pv_efficiency = pv_efficiency                      # [Wh/m^2]
@@ -115,7 +129,8 @@ class EnergyPVEnv(gymnasium.Env):
         # ACTIONS :
         # 0 -> drop frame
         # 1 -> process frame
-        self.action_space = spaces.Discrete(2)
+        # 2 -> store frame
+        self.action_space = spaces.Discrete(3)
         
         self.observation_space = spaces.Box(
             low = np.array([0.0, 0.0]),
@@ -133,6 +148,8 @@ class EnergyPVEnv(gymnasium.Env):
             self.day = (self.day + 1) % 365
         
         self.battery_level = 0.5
+        self.storage = 0
+        
         self.inner_step = 0
         self.current_step = 0
         self.irrad = self.get_irradiance()
@@ -216,7 +233,7 @@ class EnergyPVEnv(gymnasium.Env):
         if(action == 0):
             self.total_frames_dropped += self.frames_per_interval
 
-            if(available_energy < needed_energy):
+            if(available_energy <= needed_energy and self.storage < self.storage_capacity):
                 self.update_battery_level(panel_energy - self.e_idle)
                 reward = 1
             else:
@@ -225,15 +242,46 @@ class EnergyPVEnv(gymnasium.Env):
         
         # action is "process the frames batch"
         elif(action == 1):
-            if(available_energy < needed_energy):
+            # if it does not have enough energy to compute, penalize it
+            if(available_energy <= needed_energy):
                 self.update_battery_level(panel_energy - needed_energy)
                 self.total_frames_dropped += self.frames_per_interval
+                
                 reward = 0
+                
+            # if it has enough energy to compute frames
             else:
                 self.update_battery_level(panel_energy - needed_energy)
                 self.total_frames_processed += self.frames_per_interval
+                
+                # if the storage is not empty
+                if(self.storage > 0):
+                    
+                    # check if there is enough energy for a computation
+                    if((self.battery_level * self.battery_capacity) > self.e_idle):
+                        delta_energy = (self.battery_level * self.battery_capacity) > self.e_idle
+                        processable_extra_frames = delta_energy / self.e_frame
+
+                        # if at least one frame can be processed, remove them from the storage
+                        # and compute them 
+                        if(processable_extra_frames > 0):
+                            self.update_battery_level(processable_extra_frames * self.e_frame)
+                            self.storage -= processable_extra_frames
+                            self.total_frames_processed += processable_extra_frames
+                            
                 reward = 1
         
+        # action is "store batch of frames into storage for computing it later"
+        elif(action == 2):
+            
+            # if there is not enough energy and the storage is not "empty" then store the batch of frames
+            if(available_energy <= needed_energy and 
+                self.storage < (self.storage_capacity - (self.fps * self.frames_per_interval))):
+                self.storage += self.frames_per_interval
+                reward = 1
+            else:
+                reward = 0
+
         return reward
 
     def get_info(self):
@@ -242,6 +290,7 @@ class EnergyPVEnv(gymnasium.Env):
             'irradiance': self.irrad,
             'battery_level': self.battery_level,
             'battery_wh': self.battery_level * self.battery_capacity,
+            'storage_level': self.storage,
             'day': self.day,
             'frames_processed': self.total_frames_processed,
             'frames_dropped': self.total_frames_dropped,

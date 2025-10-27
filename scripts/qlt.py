@@ -30,6 +30,7 @@ class Agent:
         self.env = environment_simplified.EnergyPVEnv(
             datapath,
             battery_capacity,
+            storage_capacity,
             power_idle,
             power_frame,
             delta_time,
@@ -56,6 +57,7 @@ class Agent:
 
     def choice_action(self, state, eps):
         b_idx, t_idx = self.state_discretization(state[0], state[1])
+        # b_idx, t_idx = state[0], state[1]
         
         # print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
         if np.random.random() < eps:
