@@ -7,6 +7,7 @@ class Agent:
     def __init__(self, 
                  datapath,
                  battery_capacity,
+                 storage_capacity,
                  power_idle,
                  power_frame,
                  delta_time,
