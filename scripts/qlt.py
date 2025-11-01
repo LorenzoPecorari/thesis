@@ -53,7 +53,7 @@ class Agent:
         self.battery_capacity = battery_capacity
         
         # 3d table, |battery_levls| x |time_levels| x |actions|
-        self.table = np.zeros((battery_bins, time_bins, 2))
+        self.table = np.zeros((battery_bins, time_bins, 3))
 
     def choice_action(self, state, eps):
         b_idx, t_idx = self.state_discretization(state[0], state[1])
@@ -62,7 +62,7 @@ class Agent:
         # print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
         if np.random.random() < eps:
             # print("RANDOM")
-            return random.randint(0, 1)
+            return random.randint(0, 2)
         else:
             # print("DECIDED")
             return np.argmax(self.table[b_idx, t_idx])
@@ -98,12 +98,15 @@ class Agent:
         irradiance = []
         cumulative_traces = []
         battery_traces = []
+        storage = []
 
         for episode in range(self.episodes + 1):
             state, _ = self.env.reset(self.seed)
             partial_reward = 0
             battery_avg = 0
             avg_irrad = 0
+            storage_temp = 0
+            
             battery = []
             
             trace = []
@@ -120,9 +123,12 @@ class Agent:
                 self.update_table(state, new_state, action, reward)
                 partial_reward += reward
                 state = new_state
+                
                 battery.append(info['battery_level'] * self.battery_capacity)
                 battery_avg += info['battery_level']
                 avg_irrad += info['irradiance']
+                storage_temp += info['storage_level']
+
                 trace.append(partial_reward)
             
             if(episode % 50 == 0):
@@ -135,6 +141,7 @@ class Agent:
             processed_frames.append(info['frames_processed'])
             battery.append(battery_avg / self.env.max_steps)
             irradiance.append(avg_irrad / self.env.max_steps)
+            storage.append(storage_temp)
             
             # self.save_table(episode)
             
@@ -144,7 +151,7 @@ class Agent:
         # self.plot_cumulative_trace(cumulative_traces)
         # self.plot_daily_battery(battery_traces)
 
-        return rewards, dropped_frames, processed_frames, battery, irradiance
+        return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
     ### daily metrics
 
