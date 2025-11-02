@@ -235,8 +235,8 @@ class EnergyPVEnv(gymnasium.Env):
 
             if(available_energy <= needed_energy and self.storage < self.storage_capacity):
                 self.update_battery_level(panel_energy - self.e_idle)
-                reward = 1 * self.frames_per_interval
-                # reward = 1
+                # reward = 1 * self.frames_per_interval
+                reward = 1
 
             else:
                 self.update_battery_level(panel_energy - self.e_idle)
@@ -275,8 +275,8 @@ class EnergyPVEnv(gymnasium.Env):
                             self.total_frames_processed += processable_extra_frames
                             increase_reward += processable_extra_frames
                             
-                reward = 1 * increase_reward
-                # reward = 1        
+                # reward = 1 * increase_reward
+                reward = 1        
                 
         # action is "store batch of frames into storage for computing it later"
         elif(action == 2):
@@ -286,8 +286,8 @@ class EnergyPVEnv(gymnasium.Env):
                 self.storage < (self.storage_capacity - (self.fps * self.frames_per_interval))):
                 self.storage += self.frames_per_interval
 
-                reward = 1 * self.frames_per_interval                
-                # reward = 1
+                # reward = 1 * self.frames_per_interval                
+                reward = 1
             else:
                 reward = 0
 
