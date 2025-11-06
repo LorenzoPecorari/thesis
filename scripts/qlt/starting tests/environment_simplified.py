@@ -204,7 +204,7 @@ class EnergyPVEnv(gymnasium.Env):
             return 0.0
         
         power_pv = irradiance * self.pv_area * self.pv_efficiency
-        energy_pv = (power_pv * self.interval) / 3600
+        energy_pv = (power_pv * self.interval)
         return energy_pv
     
     def update_battery_level(self, value):

@@ -9,7 +9,7 @@ class Agent:
                  battery_capacity,
                  storage_capacity,
                  power_idle,
-                 power_frame,
+                 power_max,
                  delta_time,
                  proc_interval,
                  max_irradiation,
@@ -32,13 +32,18 @@ class Agent:
             battery_capacity,
             storage_capacity,
             power_idle,
-            power_frame,
+            power_max,
             delta_time,
             proc_interval,
             max_irradiation,
             pv_efficiency,
             pv_area,
             fps)
+
+        # tecnical parameters
+        self.fps = fps
+        self.p_idle = power_idle
+        self.p_max = power_max
 
         # hyperparameters
         self.seed = seed
@@ -53,7 +58,7 @@ class Agent:
         self.battery_capacity = battery_capacity
         
         # 3d table, |battery_levls| x |time_levels| x |actions|
-        self.table = np.zeros((battery_bins, time_bins, 3))
+        self.table = np.zeros((battery_bins, time_bins, self.fps + 1))
 
     def choice_action(self, state, eps):
         b_idx, t_idx = self.state_discretization(state[0], state[1])
@@ -62,7 +67,7 @@ class Agent:
         # print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
         if np.random.random() < eps:
             # print("RANDOM")
-            return random.randint(0, 2)
+            return random.randint(0, self.fps)
         else:
             # print("DECIDED")
             return np.argmax(self.table[b_idx, t_idx])
@@ -106,9 +111,7 @@ class Agent:
             battery_avg = 0
             avg_irrad = 0
             storage_temp = 0
-            
-            battery = []
-            
+                        
             trace = []
             info = {}
 
@@ -124,12 +127,13 @@ class Agent:
                 partial_reward += reward
                 state = new_state
                 
-                battery.append(info['battery_level'] * self.battery_capacity)
+                # battery.append(info['battery_level'] * self.battery_capacity)
                 battery_avg += info['battery_level']
                 avg_irrad += info['irradiance']
                 storage_temp += info['storage_level']
 
                 trace.append(partial_reward)
+                # input("Press enter to continue...")
             
             if(episode % 50 == 0):
                 cumulative_traces.append(trace)
@@ -137,9 +141,9 @@ class Agent:
             
             print(f"episode: {episode}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
             # print(f"dropped: {info['frames_dropped']} - processed : {info['frames_processed']} - avg battery : {battery_avg / self.env.max_steps} - avg irradiance: {avg_irrad / self.env.max_steps}")
-            dropped_frames.append(info['frames_dropped'])
+            # dropped_frames.append(info['frames_dropped'])
             processed_frames.append(info['frames_processed'])
-            battery.append(battery_avg / self.env.max_steps)
+            battery.append(((battery_avg * self.battery_capacity) / self.env.max_steps))
             irradiance.append(avg_irrad / self.env.max_steps)
             storage.append(storage_temp)
             
@@ -148,9 +152,10 @@ class Agent:
             rewards.append(partial_reward)
             # input("Press enter to continue...")
         
-        # self.plot_cumulative_trace(cumulative_traces)
-        # self.plot_daily_battery(battery_traces)
-
+        self.plot_cumulative_trace(cumulative_traces)
+        self.plot_daily_battery(battery_traces)
+        self.plot_battery(battery)
+        
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
     ### daily metrics
@@ -166,7 +171,7 @@ class Agent:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig("cumulative_rewards_qlt.pdf")
+        plt.savefig(f"cumulative_rewards_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()    
             
     def plot_daily_battery(self, data):
@@ -181,7 +186,7 @@ class Agent:
         plt.legend()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig("battery_daily_qlt.pdf")
+        plt.savefig(f"battery_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()  
         
             
@@ -198,7 +203,7 @@ class Agent:
         plt.plot(data, label = "raw", alpha = 0.3)
         plt.grid()
         plt.legend()
-        plt.savefig("rewards_plot_qlt.pdf")
+        plt.savefig(f"rewards_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()
 
     def plot_frames(self, dropped, processed):
@@ -215,13 +220,19 @@ class Agent:
         
         plt.grid()
         plt.legend()
-        plt.savefig("frames_plot_qlt.pdf")
+        plt.savefig(f"frames_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()
 
     def plot_battery(self, data):
+        
+        # for elem in data:
+        #     print(elem)
+            
+        print(len(data))
+        
         window = 10
         plt.suptitle("Q-Learning tabular - battery level")
-        plt.title(f"B = {self.env.battery_capacity}, e_I = {round(self.env.e_idle * 3600 / self.env.interval, 2)}, e_F = {round(self.env.e_frame * 3600, 2)}, fps = {self.env.fps}")
+        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         
         plt.xlabel("Episodes")
         plt.ylabel("Battery level")
@@ -229,7 +240,7 @@ class Agent:
         plt.plot(data, label = "raw", alpha = 0.3)
         plt.grid()
         plt.legend()
-        plt.savefig("battery_plot_qlt.pdf")
+        plt.savefig(f"battery_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()
 
     def plot_irradiance(self, data):
@@ -245,6 +256,37 @@ class Agent:
         plt.savefig("irradiance_plot.pdf")
         plt.close()
         
+    def plot_processed_storage(self, processed, stored):
+        window = 10
+        plt.suptitle("Q-Learning tabular - Frames management")
+        plt.title(f"B = {self.env.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
+        plt.xlabel("Episodes")
+        plt.ylabel("Frames")
+        
+        # plt.plot(range(window - 1, len(stored)), np.convolve(stored, np.ones(window)/window, mode='valid'), label = "smoothened stored", alpha = 1.0)
+        # plt.plot(stored, label = "raw stored", alpha = 0.3)
+        plt.plot(range(window - 1, len(processed)), np.convolve(processed, np.ones(window)/window, mode='valid'), label = "smoothened processed", alpha = 1.0)
+        plt.plot(processed, label = "raw processed", alpha = 0.3)
+        
+        plt.grid()
+        plt.legend()
+        # plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+        # plt.tight_layout()
+        plt.savefig(f"frames_qlt_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.close()
+        
+        plt.title("Q-Learning tabular - Average storage")
+        plt.xlabel("Episodes")
+        plt.ylabel("Storage level")
+
+        plt.plot(range(window - 1, len(stored)), np.convolve(stored, np.ones(window)/window, mode='valid'), label = f"stored", alpha = 1.0)
+
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+        plt.tight_layout()
+        plt.savefig(f"storage_comparison_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+
+            
     # def save_table(self, episode, battery_bins, time_bins):
     #     array_drop = []
     #     for i in range(battery_bins):

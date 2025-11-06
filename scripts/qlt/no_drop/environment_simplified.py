@@ -23,43 +23,26 @@ import interpol as ip
 Each status is represented as:
     S = {s_1, ..., s_n}
     if s_t belongs to S, so
-        s_t = {battery_level(t-1), irradiance(t), time(t)}
+        s_t = {battery_level(t-1), time(t)}
 
 where each variable is normalized over the range [0, 1].
 
 It is needed to provide to the environment :
  - the path of a dataset of data related to irradiance measurements (coming from Solcast),
  - the nominal capacity of the battery,
- - the power at idle and the avg needed for computing a frame,
+ - the power at idle and the peak power required by the hardware,
  - the frequency of measurements and the desired computational frequency in seconds,
  - an estimation of the maximum irradiance reachable,
  - the efficiency and the area of the photovoltaic panel.
  
- For now, only three actions are availables: DROP, PROCESS, STORE; all identified as 0, 1 and 2.
- 
- The reward function defined is the following:
-    let A = {DROP, PROCESS, STORE}
-    
-    if action belongs to A, so:
-        if (action == DROP)
-            if (not enough energy for processing and storage is full)
-                reward = +1
-            else
-                reward = 0
-        
-        else if (action == PROCESS)
-            if (enough energy for processing batch of frames)
-                reward = +1
+There are (fps + 1) action that can be chosen and each of them tell which is the framerate
+to adopt in such step on the environment in order to compute the frames that arrives in the storage at each time.
 
-                if(enough energy to process other frames and storage not empty)
-                    process the predicted frames
-            else
-                reward = 0
-                
-        else if (action == STORE)
-            if(not enough energy for process and storage is not empty)
-                store frames
-                reward = +1
+If the action chosen allow to not drain all the energy stored in the battery until that moment,
+the reward will be the number of frames taken from the storage and computed, so (fps * interval between each step).
+Otherwise, the reawrd will be 0 and the number of frames extracted from the storage and computed will be based on 
+the energy of the battery.   
+ 
     
 '''
 
@@ -70,7 +53,7 @@ class EnergyPVEnv(gymnasium.Env):
                  battery_capacity,
                  storage_capacity,
                  power_idle,
-                 power_frame,
+                 power_max,
                  delta_time,
                  proc_interval,
                  max_irradiation,
@@ -86,23 +69,23 @@ class EnergyPVEnv(gymnasium.Env):
 
         # battery and system specs
         self.battery_level = 0.0
-        self.battery_capacity = battery_capacity                # [Wh]
+        self.battery_capacity = battery_capacity * 3600             # [Wh -> Ws = J]
         
         self.storage = 0
-        self.storage_capacity = storage_capacity
+        self.storage_capacity = storage_capacity * 100000000000        # UNBOUNDED!
         
-        self.pv_area = pv_area                                  # [m^2]
-        self.pv_efficiency = pv_efficiency                      # [Wh/m^2]
+        self.pv_area = pv_area                                      # [m^2]
+        self.pv_efficiency = pv_efficiency                          # [%]
         
         # energy params
-        self.e_idle = (power_idle * proc_interval) / 3600       # [Wh]
-        self.e_frame = (power_frame) / 3600                     # [Wh] per singolo frame
+        self.e_idle = power_idle * proc_interval                    # [Ws = J over defined interval]
+        self.e_frame = ((power_max - power_idle) / fps)                           # [Ws = J] per singolo frame in un secondo, da rivedere
         
-        self.irrad = 0                                          # [W/m^2]
-        self.max_irrad = max_irradiation                        # [W/m^2]
-        self.interval = proc_interval                           # [s]
-        self.delta_time = delta_time                            # [s]
-        self.fps = fps                                          # [1/s]
+        self.irrad = 0                                              # [W/m^2]
+        self.max_irrad = max_irradiation                            # [W/m^2]
+        self.interval = proc_interval                               # [s]
+        self.delta_time = delta_time                                # [s]
+        self.fps = fps                                              # [1/s]
 
         # value of images to process in batch
         self.frames_per_interval = int(fps * proc_interval)
@@ -117,7 +100,6 @@ class EnergyPVEnv(gymnasium.Env):
         
         # frames metrics
         self.total_frames_processed = 0
-        self.total_frames_dropped = 0
         
         # temporal metrics
         self.time = 0.0
@@ -125,12 +107,10 @@ class EnergyPVEnv(gymnasium.Env):
         self.equinox = datetime.datetime(self.year, 3, 20)
         self.day = 0
 
-
         # ACTIONS :
-        # 0 -> drop frame
-        # 1 -> process frame
-        # 2 -> store frame
-        self.action_space = spaces.Discrete(3)
+        # 0, 1, ..., fps -> tells fps to process
+
+        self.action_space = spaces.Discrete(self.fps+1)
         
         self.observation_space = spaces.Box(
             low = np.array([0.0, 0.0]),
@@ -174,6 +154,7 @@ class EnergyPVEnv(gymnasium.Env):
         
         self.irrad = self.get_irradiance()
         e_pv = self.get_pv_energy(self.irrad * self.max_irrad)
+        self.storage += (self.fps * self.interval)
         
         reward = self.calculate_reward(action, e_pv)
         
@@ -203,8 +184,10 @@ class EnergyPVEnv(gymnasium.Env):
         if(irradiance <= 0.0):
             return 0.0
         
-        power_pv = irradiance * self.pv_area * self.pv_efficiency
-        energy_pv = (power_pv * self.interval) / 3600
+        # power_pv = irradiance * self.pv_area * self.pv_efficiency
+        power_pv = min(irradiance * self.pv_area * self.pv_efficiency, 10)
+        # print(f"pv power: {irradiance * self.pv_area * self.pv_efficiency} VS {power_pv} => energy: {power_pv * self.interval}")
+        energy_pv = power_pv * self.interval
         return energy_pv
     
     def update_battery_level(self, value):
@@ -221,77 +204,25 @@ class EnergyPVEnv(gymnasium.Env):
         
         actual_battery_energy = self.battery_level * self.battery_capacity
 
-        # energy for all the images of the batch        
-        energy_for_frames = self.e_frame * self.frames_per_interval
-        needed_energy = energy_for_frames + self.e_idle
-        
-        available_energy = actual_battery_energy + panel_energy
-        
-        reward = 0
-        
-        # action is "drop the frames batch"
-        if(action == 0):
-            self.total_frames_dropped += self.frames_per_interval
-
-            if(available_energy <= needed_energy and self.storage < self.storage_capacity):
-                self.update_battery_level(panel_energy - self.e_idle)
-                # reward = 1 * self.frames_per_interval
-                reward = 1
-
-            else:
-                self.update_battery_level(panel_energy - self.e_idle)
-                reward = 0     
-        
-        # action is "process the frames batch"
-        elif(action == 1):
-            # if it does not have enough energy to compute, penalize it
-            if(available_energy <= needed_energy):
-                self.update_battery_level(panel_energy - needed_energy)
-                self.total_frames_dropped += self.frames_per_interval
+        frames_per_interval = action * self.interval
+        # print(f"fps: {self.fps} - action: {action} - fpi: {frames_per_interval}")
+        energy_needed = (frames_per_interval * self.e_frame) + self.e_idle
                 
-                reward = 0
-                
-            # if it has enough energy to compute frames
-            else:
-                self.update_battery_level(panel_energy - needed_energy)
-                self.total_frames_processed += self.frames_per_interval
-                
-                increase_reward = self.frames_per_interval
-                
-                # if the storage is not empty
-                if(self.storage > 0):
-                    
-                    
-                    # check if there is enough energy for a computation
-                    if((self.battery_level * self.battery_capacity) > self.e_idle):
-                        delta_energy = (self.battery_level * self.battery_capacity) > self.e_idle
-                        processable_extra_frames = delta_energy / self.e_frame
-
-                        # if at least one frame can be processed, remove them from the storage
-                        # and compute them 
-                        if(processable_extra_frames > 0):
-                            self.update_battery_level(processable_extra_frames * self.e_frame)
-                            self.storage -= processable_extra_frames
-                            self.total_frames_processed += processable_extra_frames
-                            increase_reward += processable_extra_frames
-                            
-                # reward = 1 * increase_reward
-                reward = 1        
-                
-        # action is "store batch of frames into storage for computing it later"
-        elif(action == 2):
+        if((actual_battery_energy + panel_energy) >= energy_needed):
+            self.update_battery_level(panel_energy - energy_needed)
+            self.storage -= frames_per_interval
+            self.total_frames_processed += frames_per_interval
             
-            # if there is not enough energy and the storage is not "empty" then store the batch of frames
-            if(available_energy <= needed_energy and 
-                self.storage < (self.storage_capacity - (self.fps * self.frames_per_interval))):
-                self.storage += self.frames_per_interval
-
-                # reward = 1 * self.frames_per_interval                
-                reward = 1
-            else:
-                reward = 0
-
-        return reward
+            # return 1
+            return frames_per_interval
+        
+        else:
+            # self.update_battery_level(panel_energy - self.e_idle)
+            processable = int((actual_battery_energy + panel_energy) / self.e_frame)
+            self.storage -= processable
+            self.update_battery_level(panel_energy - (self.e_idle + (processable * self.e_frame)))
+            return 0
+            
 
     def get_info(self):
         return {

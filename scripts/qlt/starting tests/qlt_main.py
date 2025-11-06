@@ -5,13 +5,13 @@ import numpy as np
 
 # for realistic simulations, battery_capacity = 25Wh or 100Wh and fps_max = 30
 
-datapath = '../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
+datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
 battery_capacity = 100             # [Wh]
 storage_capacity = 54000
 power_idle = 0.0                        # [W]
 power_frame = 5.0                       # [W]
 delta_time = 15 * 60                    # [sec]
-proc_interval = (1/12) * 60                 # [sec]                     
+proc_interval = (1) * 60                 # [sec]                     
 pv_efficiency = 0.2
 pv_area = 1.0
 fps = 15
