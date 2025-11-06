@@ -15,7 +15,7 @@ proc_interval = (1) * 60                 # [sec]
 pv_efficiency = 0.2
 # pv_area = 10 / (1200 * pv_efficiency)
 pv_area = 1.0
-fps = 30
+fps = 15
 seed = "linear"
 max_irradiation = 1200
 
@@ -79,7 +79,7 @@ def multiple_train(num_agents):
     for i in range(num_agents):
         agent = Agent(
                 datapath,
-                 battery_capacity / 4,
+                 int(battery_capacity / 4),
                  storage_capacity,
                  power_idle,
                  power_max,
@@ -129,14 +129,14 @@ def battery_frames_rewards_train():
     for i in range(2):
         battery = battery_capacity if i == 0 else battery_capacity / 4
         
-        for fps_mult in [1, 2]:  # fps e fps*2
+        for fps_mult in [1, 2]:
             current_fps = fps * fps_mult
             
             agent = Agent(
                 datapath, battery, storage_capacity,
                 power_idle, power_max, delta_time, proc_interval,
                 max_irradiation, pv_efficiency, pv_area,
-                current_fps,  # ← fps variabile
+                current_fps,
                 seed, battery_bins, time_bins,
                 alpha, gamma, eps_min, eps_dec, eps_init, episodes
             )

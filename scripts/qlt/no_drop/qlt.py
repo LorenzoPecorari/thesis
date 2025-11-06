@@ -111,7 +111,8 @@ class Agent:
             battery_avg = 0
             avg_irrad = 0
             storage_temp = 0
-                        
+            
+            battery_trace = []            
             trace = []
             info = {}
 
@@ -128,16 +129,17 @@ class Agent:
                 state = new_state
                 
                 # battery.append(info['battery_level'] * self.battery_capacity)
-                battery_avg += info['battery_level']
+                battery_avg += (info['battery_level'] * self.battery_capacity)
                 avg_irrad += info['irradiance']
                 storage_temp += info['storage_level']
+                battery_trace.append(info['battery_level'] * self.battery_capacity)
 
                 trace.append(partial_reward)
                 # input("Press enter to continue...")
             
             if(episode % 50 == 0):
                 cumulative_traces.append(trace)
-                battery_traces.append(battery)
+                battery_traces.append(battery_trace)
             
             print(f"episode: {episode}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
             # print(f"dropped: {info['frames_dropped']} - processed : {info['frames_processed']} - avg battery : {battery_avg / self.env.max_steps} - avg irradiance: {avg_irrad / self.env.max_steps}")
@@ -152,16 +154,17 @@ class Agent:
             rewards.append(partial_reward)
             # input("Press enter to continue...")
         
-        self.plot_cumulative_trace(cumulative_traces)
-        self.plot_daily_battery(battery_traces)
-        self.plot_battery(battery)
+        # self.plot_cumulative_trace(cumulative_traces)
+        # self.plot_daily_battery(battery_traces)
+        # self.plot_battery(battery)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
     ### daily metrics
 
     def plot_cumulative_trace(self, data):
-        plt.title("Q-Learning tabular - Cumulative rewards")
+        plt.title(f"B: {self.battery_capacity}, p_i: {self.p_idle}, p_F: {self.p_max}")
+        plt.suptitle("Q-Learning tabular - Cumulative rewards")
         plt.xlabel("Step")
         plt.ylabel("Reward")
         
@@ -174,8 +177,10 @@ class Agent:
         plt.savefig(f"cumulative_rewards_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()    
             
-    def plot_daily_battery(self, data):
-        plt.title("Q-Learning tabular - Daily battery")
+    def plot_daily_battery(self, data):        
+        plt.suptitle("Q-Learning tabular - Daily battery")
+        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
+
         plt.xlabel("Step")
         plt.ylabel("Battery")
         
@@ -195,7 +200,7 @@ class Agent:
     def plot_rewards(self, data):
         window = 10
         plt.suptitle("Q-Learning tabular - rewards")
-        plt.title(f"B = {self.env.battery_capacity}, e_I = {round(self.env.e_idle * 3600 / self.env.interval, 2)}, e_F = {round(self.env.e_frame * 3600, 2)}, fps = {self.env.fps}")
+        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         
         plt.xlabel("Episodes")
         plt.ylabel("Rewards")
@@ -209,7 +214,7 @@ class Agent:
     def plot_frames(self, dropped, processed):
         window = 10
         plt.suptitle("Q-Learning tabular - frames")
-        plt.title(f"B = {self.env.battery_capacity}, e_I = {round(self.env.e_idle * 3600 / self.env.interval, 2)}, e_F = {round(self.env.e_frame * 3600, 2)}, fps = {self.env.fps}")
+        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         plt.xlabel("Episodes")
         plt.ylabel("Frames")
         
@@ -285,7 +290,22 @@ class Agent:
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         plt.tight_layout()
         plt.savefig(f"storage_comparison_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.close()
 
+    def plot_storage_daily(self, storage_traces):
+        plt.title("Q-Learning tabular - Daily storage")
+        plt.xlabel("Step")
+        plt.ylabel("storage")
+        
+        for i in range(len(storage_traces)):
+            plt.plot(storage_traces[i], label = f"{str(i*50)}-th ep." )
+        
+        plt.grid()
+        plt.legend()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
+        plt.tight_layout()
+        plt.savefig(f"storage_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.close()  
             
     # def save_table(self, episode, battery_bins, time_bins):
     #     array_drop = []
