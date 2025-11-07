@@ -208,7 +208,7 @@ class Agent:
     def plot_daily_action(self, data):
         window = 90        
         plt.suptitle("Q-Learning tabular - Daily FPS")
-        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
+        plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
 
         plt.xlabel("Step")
         plt.ylabel("FPS")
@@ -227,7 +227,7 @@ class Agent:
     def plot_rewards(self, data):
         window = 10
         plt.suptitle("Q-Learning tabular - rewards")
-        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
+        plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         
         plt.xlabel("Episodes")
         plt.ylabel("Rewards")
@@ -241,7 +241,7 @@ class Agent:
     def plot_frames(self, dropped, processed):
         window = 10
         plt.suptitle("Q-Learning tabular - frames")
-        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
+        plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         plt.xlabel("Episodes")
         plt.ylabel("Frames")
         
@@ -258,7 +258,7 @@ class Agent:
     def plot_action(self, data):
         window = 10
         plt.suptitle("Q-Learning tabular - Average fps")
-        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
+        plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
         plt.xlabel("Episodes")
         plt.ylabel("FPS")
         
@@ -280,7 +280,7 @@ class Agent:
         
         window = 10
         plt.suptitle("Q-Learning tabular - battery level")
-        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
+        plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         
         plt.xlabel("Episodes")
         plt.ylabel("Battery level")
@@ -307,7 +307,7 @@ class Agent:
     def plot_processed_storage(self, processed, stored):
         window = 10
         plt.suptitle("Q-Learning tabular - Frames management")
-        plt.title(f"B = {self.env.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
+        plt.title(f"B = {self.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
         plt.xlabel("Episodes")
         plt.ylabel("Frames")
         

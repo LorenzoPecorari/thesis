@@ -15,8 +15,8 @@ proc_interval = (1) * 60                 # [sec]
 pv_efficiency = 0.2
 # pv_area = 10 / (1200 * pv_efficiency)
 pv_area = 1.0
-fps = 15
-seed = "linear"
+fps = 30
+seed = None
 max_irradiation = 1200
 
 battery_bins = 10
