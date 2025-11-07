@@ -104,6 +104,8 @@ class Agent:
         cumulative_traces = []
         battery_traces = []
         storage = []
+        actions = []
+        action_traces = []
 
         for episode in range(self.episodes + 1):
             state, _ = self.env.reset(self.seed)
@@ -111,7 +113,9 @@ class Agent:
             battery_avg = 0
             avg_irrad = 0
             storage_temp = 0
+            action_avg = 0
             
+            action_trace = []
             battery_trace = []            
             trace = []
             info = {}
@@ -133,13 +137,16 @@ class Agent:
                 avg_irrad += info['irradiance']
                 storage_temp += info['storage_level']
                 battery_trace.append(info['battery_level'] * self.battery_capacity)
+                action_avg += action
+                action_trace.append(action)
 
                 trace.append(partial_reward)
                 # input("Press enter to continue...")
             
-            if(episode % 50 == 0):
+            if(episode % 90 == 0):
                 cumulative_traces.append(trace)
                 battery_traces.append(battery_trace)
+                action_traces.append(action_trace)
             
             print(f"episode: {episode}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
             # print(f"dropped: {info['frames_dropped']} - processed : {info['frames_processed']} - avg battery : {battery_avg / self.env.max_steps} - avg irradiance: {avg_irrad / self.env.max_steps}")
@@ -147,6 +154,7 @@ class Agent:
             processed_frames.append(info['frames_processed'])
             battery.append(((battery_avg * self.battery_capacity) / self.env.max_steps))
             irradiance.append(avg_irrad / self.env.max_steps)
+            actions.append(action_avg / self.env.max_steps)
             storage.append(storage_temp)
             
             # self.save_table(episode)
@@ -154,9 +162,12 @@ class Agent:
             rewards.append(partial_reward)
             # input("Press enter to continue...")
         
-        # self.plot_cumulative_trace(cumulative_traces)
-        # self.plot_daily_battery(battery_traces)
-        # self.plot_battery(battery)
+        self.plot_cumulative_trace(cumulative_traces)
+        self.plot_daily_battery(battery_traces)
+        self.plot_daily_action(action_traces)
+        
+        self.plot_battery(battery)
+        self.plot_action(actions)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
@@ -169,7 +180,7 @@ class Agent:
         plt.ylabel("Reward")
         
         for i in range(len(data)):
-            plt.plot(data[i], label = f"{str(i*50)}-th episode")
+            plt.plot(data[i], label = f"{str(i*90)}-th episode")
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -179,13 +190,13 @@ class Agent:
             
     def plot_daily_battery(self, data):        
         plt.suptitle("Q-Learning tabular - Daily battery")
-        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
+        plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
 
         plt.xlabel("Step")
         plt.ylabel("Battery")
         
         for i in range(len(data)):
-            plt.plot(data[i], label = f"{str(i*50)}-th battery" )
+            plt.plot(data[i], label = f"{str(i * 90)}-th episode" )
         
         plt.grid()
         plt.legend()
@@ -194,6 +205,22 @@ class Agent:
         plt.savefig(f"battery_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()  
         
+    def plot_daily_action(self, data):
+        window = 90        
+        plt.suptitle("Q-Learning tabular - Daily FPS")
+        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
+
+        plt.xlabel("Step")
+        plt.ylabel("FPS")
+        
+        for i in range(len(data)):
+            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * 90)}-th episode", alpha = 1.0)
+
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
+        plt.tight_layout()
+        plt.savefig(f"action_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.close()  
             
     ### training metrics
 
@@ -227,6 +254,22 @@ class Agent:
         plt.legend()
         plt.savefig(f"frames_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()
+
+    def plot_action(self, data):
+        window = 10
+        plt.suptitle("Q-Learning tabular - Average fps")
+        plt.title(f"B = {self.env.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
+        plt.xlabel("Episodes")
+        plt.ylabel("FPS")
+        
+        plt.plot(data, label = "raw fps", alpha = 0.3)
+        plt.plot(range(window - 1, len(data)), np.convolve(data, np.ones(window)/window, mode='valid'), label = "smooth fps", alpha = 1.0)
+        
+        plt.grid()
+        plt.legend()
+        plt.savefig(f"action_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.close()
+        
 
     def plot_battery(self, data):
         
@@ -298,7 +341,7 @@ class Agent:
         plt.ylabel("storage")
         
         for i in range(len(storage_traces)):
-            plt.plot(storage_traces[i], label = f"{str(i*50)}-th ep." )
+            plt.plot(storage_traces[i], label = f"{str(i * 90)}-th ep." )
         
         plt.grid()
         plt.legend()

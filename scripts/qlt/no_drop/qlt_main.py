@@ -26,7 +26,7 @@ gamma = 0.9
 eps_min = 0.05
 eps_dec = 0.97
 eps_init = 1.0
-episodes = 365
+episodes = 360
 
 def multiple_train(num_agents):
     window = 10
@@ -260,8 +260,8 @@ def single_train():
     # agent.plot_frames(results[1], results[2])
 
 # multiple_train(2)
-# single_train()
-battery_frames_rewards_train()
+single_train()
+# battery_frames_rewards_train()
 
 # window = 10
 # plt.subplots(figsize=(8, 6))
