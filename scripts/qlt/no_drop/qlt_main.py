@@ -16,7 +16,7 @@ pv_efficiency = 0.2
 # pv_area = 10 / (1200 * pv_efficiency)
 pv_area = 1.0
 fps = 30
-seed = None
+seed = "linear"
 max_irradiation = 1200
 
 battery_bins = 10
@@ -260,8 +260,8 @@ def single_train():
     # agent.plot_frames(results[1], results[2])
 
 # multiple_train(2)
-single_train()
-# battery_frames_rewards_train()
+# single_train()
+battery_frames_rewards_train()
 
 # window = 10
 # plt.subplots(figsize=(8, 6))

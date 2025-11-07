@@ -91,6 +91,9 @@ class Agent:
         b_idx, t_idx = self.state_discretization(state[0], state[1])
         next_b_idx, next_t_idx = self.state_discretization(next_state[0], next_state[1])
         
+        # print(f"current_state: [{b_idx}, {t_idx}] - next_state: [{next_b_idx}, {next_t_idx}]")
+        # print(f"Q(s', a'): {np.max(self.table[next_b_idx, next_t_idx])} - reward: {reward}")
+        
         # print(f"\n State of Q({b_idx}, {t_idx}, {action}): {self.table[b_idx, t_idx, action]} -> ", end="")
         self.table[b_idx, t_idx, action] = (1 - self.alpha) * self.table[b_idx, t_idx, action] + (self.alpha * (reward + (self.gamma * np.max(self.table[next_b_idx, next_t_idx]))))
         # print(f"{self.table[b_idx, t_idx, action]}")
@@ -162,12 +165,12 @@ class Agent:
             rewards.append(partial_reward)
             # input("Press enter to continue...")
         
-        self.plot_cumulative_trace(cumulative_traces)
-        self.plot_daily_battery(battery_traces)
-        self.plot_daily_action(action_traces)
+        # self.plot_cumulative_trace(cumulative_traces)
+        # self.plot_daily_battery(battery_traces)
+        # self.plot_daily_action(action_traces)
         
-        self.plot_battery(battery)
-        self.plot_action(actions)
+        # self.plot_battery(battery)
+        # self.plot_action(actions)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 

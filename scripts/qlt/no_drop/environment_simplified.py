@@ -207,6 +207,9 @@ class EnergyPVEnv(gymnasium.Env):
         frames_per_interval = action * self.interval
         # print(f"fps: {self.fps} - action: {action} - fpi: {frames_per_interval}")
         energy_needed = (frames_per_interval * self.e_frame) + self.e_idle
+        
+        # print(f"actual_battery_energy: {actual_battery_energy} - E_pv: {panel_energy} - needed: {energy_needed}")
+        # input(f"Presse enter...")
                 
         if((actual_battery_energy + panel_energy) >= energy_needed):
             self.update_battery_level(panel_energy - energy_needed)
@@ -219,6 +222,8 @@ class EnergyPVEnv(gymnasium.Env):
         else:
             # self.update_battery_level(panel_energy - self.e_idle)
             processable = int((actual_battery_energy + panel_energy) / self.e_frame)
+            # print(f"estimated: {frames_per_interval} - processed: {processable} - ")
+            # input("Press ENTER to continue...")
             self.storage -= processable
             self.update_battery_level(panel_energy - (self.e_idle + (processable * self.e_frame)))
             return 0
