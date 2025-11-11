@@ -100,17 +100,22 @@ class Agent:
     
     def train(self):
         rewards = []
+        cumulative_traces = []
+        
         dropped_frames = []
         processed_frames = []
-        battery = []
-        irradiance = []
-        cumulative_traces = []
-        battery_traces = []
         storage = []
-        actions = []
-        action_traces = []
         processed_stored_ratio = []
 
+        battery = []
+        battery_traces = []
+        
+        irradiance = []
+        daily_irradiance = []
+
+        actions = []
+        action_traces = []
+        
         for episode in range(self.episodes + 1):
             state, _ = self.env.reset(self.seed)
             partial_reward = 0
@@ -135,6 +140,11 @@ class Agent:
                 self.update_table(state, new_state, action, reward)
                 partial_reward += reward
                 state = new_state
+                
+                if(len(daily_irradiance) <= j):
+                    daily_irradiance.append(info['irradiance'] * self.env.max_irrad)
+                else:
+                    daily_irradiance[j] += info['irradiance'] * self.env.max_irrad
                 
                 # if(reward < action * self.env.interval):
                 #     action = int(reward / self.env.interval) 
@@ -164,7 +174,7 @@ class Agent:
             battery.append(((battery_avg) / self.env.max_steps))
             irradiance.append(((avg_irrad ) / self.env.max_steps) * self.env.max_irrad)
             actions.append(action_avg / self.env.max_steps)
-            storage.append(storage_temp)
+            storage.append(info['storage_level'])
             processed_stored_ratio.append(info['frames_processed'] / info['storage_level'])
             
             # self.save_table(episode)
@@ -179,7 +189,9 @@ class Agent:
         self.plot_battery(battery)
         self.plot_action(actions)
         self.plot_processed_stored_ratio(processed_stored_ratio)
+        
         self.plot_irradiance(irradiance)
+        self.plot_daily_irradiation(daily_irradiance)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
@@ -233,6 +245,22 @@ class Agent:
         plt.tight_layout()
         plt.savefig(f"action_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()  
+            
+    def plot_daily_irradiation(self, data):
+        plt.title("Daily average irradiance")
+        
+        window = 10
+        n = len(data)
+        for i in range(n):
+            data[i] = data[i] / self.episodes
+            
+        plt.plot(data, label = "raw", alpha = 0.4)  
+        plt.plot(range(window - 1, len(data)), np.convolve(data, np.ones(window) / window, mode='valid'), label = "smooth", alpha = 1.0)
+        
+        plt.grid()
+        plt.legend()
+        plt.savefig(f"daily_irradiance.pdf")
+        plt.close()
             
     ### training metrics
 
@@ -337,10 +365,10 @@ class Agent:
         plt.xlabel("Episodes")
         plt.ylabel("Frames")
         
-        # plt.plot(range(window - 1, len(stored)), np.convolve(stored, np.ones(window)/window, mode='valid'), label = "smoothened stored", alpha = 1.0)
+        plt.plot(range(window - 1, len(stored)), np.convolve(stored, np.ones(window)/window, mode='valid'), label = "stored", alpha = 1.0)
         # plt.plot(stored, label = "raw stored", alpha = 0.3)
-        plt.plot(range(window - 1, len(processed)), np.convolve(processed, np.ones(window)/window, mode='valid'), label = "smoothened processed", alpha = 1.0)
-        plt.plot(processed, label = "raw processed", alpha = 0.3)
+        plt.plot(range(window - 1, len(processed)), np.convolve(processed, np.ones(window)/window, mode='valid'), label = "processed", alpha = 1.0)
+        # plt.plot(processed, label = "raw processed", alpha = 0.3)
         
         plt.grid()
         plt.legend()
