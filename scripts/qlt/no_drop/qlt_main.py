@@ -5,28 +5,33 @@ import numpy as np
 
 # for realistic simulations, battery_capacity = 25Wh or 100Wh and fps_max = 30
 
+# datapath = '../../../dataset/merged_2023-2024.csv'
 datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
+# datapath = '../../../dataset/csv_42.51676443693097_12.526882609673224_fixed_23_180_PT15M.csv'
 battery_capacity = 100             # [Wh]
 storage_capacity = 54000
 power_idle = 2.6                       # [W]
 power_max = 6.0                       # [W]
 delta_time = 15 * 60                    # [sec]
 proc_interval = (1) * 60                 # [sec]                     
-pv_efficiency = 0.2
+pv_efficiency = 1.0
 # pv_area = 10 / (1200 * pv_efficiency)
-pv_area = 1.0
+pv_area = (0.01)
 fps = 30
 seed = "linear"
-max_irradiation = 1200
+max_irradiation = 1000
 
 battery_bins = 10
-time_bins = 10
+time_bins = 24
 alpha = 0.05
 gamma = 0.9
 eps_min = 0.05
 eps_dec = 0.97
 eps_init = 1.0
-episodes = 360
+
+episodes = 365
+# episodes = 730
+
 
 def multiple_train(num_agents):
     window = 10
@@ -70,7 +75,7 @@ def multiple_train(num_agents):
         results = agent.train()
         rewards.append(results[0])
 
-        plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{fps * (i+1)}fps - {battery_capacity}Wh", alpha = 1.0)        
+        plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{fps * (i+1)}fps - {int(battery_capacity)}Wh", alpha = 1.0)        
         # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{storage_capacity * i / 1000}k ", alpha = 1.0)        
         # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{battery_capacity * (i+1) / 1000} kWh ", alpha = 1.0)
 
@@ -103,7 +108,7 @@ def multiple_train(num_agents):
         results = agent.train()
         rewards.append(results[0])
 
-        plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{fps * (i+1)}fps - {battery_capacity / 4}Wh", alpha = 1.0)        
+        plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{fps * (i+1)}fps - {int(battery_capacity / 4)}Wh", alpha = 1.0)        
 
 
     plt.grid()
@@ -260,8 +265,8 @@ def single_train():
     # agent.plot_frames(results[1], results[2])
 
 # multiple_train(2)
-# single_train()
-battery_frames_rewards_train()
+single_train()
+# battery_frames_rewards_train()
 
 # window = 10
 # plt.subplots(figsize=(8, 6))

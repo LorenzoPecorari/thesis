@@ -109,6 +109,7 @@ class Agent:
         storage = []
         actions = []
         action_traces = []
+        processed_stored_ratio = []
 
         for episode in range(self.episodes + 1):
             state, _ = self.env.reset(self.seed)
@@ -135,11 +136,16 @@ class Agent:
                 partial_reward += reward
                 state = new_state
                 
+                # if(reward < action * self.env.interval):
+                #     action = int(reward / self.env.interval) 
+                
                 # battery.append(info['battery_level'] * self.battery_capacity)
-                battery_avg += (info['battery_level'] * self.battery_capacity)
+                battery_avg += (info['battery_level'] * 100)
                 avg_irrad += info['irradiance']
                 storage_temp += info['storage_level']
-                battery_trace.append(info['battery_level'] * self.battery_capacity)
+                battery_trace.append(info['battery_level'] * 100)
+                
+                
                 action_avg += action
                 action_trace.append(action)
 
@@ -155,22 +161,25 @@ class Agent:
             # print(f"dropped: {info['frames_dropped']} - processed : {info['frames_processed']} - avg battery : {battery_avg / self.env.max_steps} - avg irradiance: {avg_irrad / self.env.max_steps}")
             # dropped_frames.append(info['frames_dropped'])
             processed_frames.append(info['frames_processed'])
-            battery.append(((battery_avg * self.battery_capacity) / self.env.max_steps))
-            irradiance.append(avg_irrad / self.env.max_steps)
+            battery.append(((battery_avg) / self.env.max_steps))
+            irradiance.append(((avg_irrad ) / self.env.max_steps) * self.env.max_irrad)
             actions.append(action_avg / self.env.max_steps)
             storage.append(storage_temp)
+            processed_stored_ratio.append(info['frames_processed'] / info['storage_level'])
             
             # self.save_table(episode)
             
             rewards.append(partial_reward)
             # input("Press enter to continue...")
         
-        # self.plot_cumulative_trace(cumulative_traces)
-        # self.plot_daily_battery(battery_traces)
-        # self.plot_daily_action(action_traces)
+        self.plot_cumulative_trace(cumulative_traces)
+        self.plot_daily_battery(battery_traces)
+        self.plot_daily_action(action_traces)
         
-        # self.plot_battery(battery)
-        # self.plot_action(actions)
+        self.plot_battery(battery)
+        self.plot_action(actions)
+        self.plot_processed_stored_ratio(processed_stored_ratio)
+        self.plot_irradiance(irradiance)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
@@ -278,9 +287,7 @@ class Agent:
         
         # for elem in data:
         #     print(elem)
-            
-        print(len(data))
-        
+                    
         window = 10
         plt.suptitle("Q-Learning tabular - battery level")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
@@ -305,6 +312,22 @@ class Agent:
         plt.grid()
         plt.legend()
         plt.savefig("irradiance_plot.pdf")
+        plt.close()
+        
+    def plot_processed_stored_ratio(self, data):
+        window = 10
+        plt.suptitle("Q-Learning tabular - Processed/stored")
+        plt.title(f"B = {self.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
+        plt.xlabel("Episodes")
+        plt.ylabel("Frames")
+        
+        # plt.plot(range(window - 1, len(stored)), np.convolve(stored, np.ones(window)/window, mode='valid'), label = "smoothened stored", alpha = 1.0)
+        # plt.plot(stored, label = "raw stored", alpha = 0.3)
+        plt.plot(range(window - 1, len(data)), np.convolve(data, np.ones(window)/window, mode='valid'), label = "smoothened", alpha = 1.0)
+        plt.plot(data, label = "raw", alpha = 0.3)
+        plt.grid()
+        plt.legend()
+        plt.savefig(f"processed_stored_ratio_{self.battery_capacity}Wh_{self.fps}fps.pdf")
         plt.close()
         
     def plot_processed_storage(self, processed, stored):

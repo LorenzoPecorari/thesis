@@ -184,8 +184,8 @@ class EnergyPVEnv(gymnasium.Env):
         if(irradiance <= 0.0):
             return 0.0
         
-        # power_pv = irradiance * self.pv_area * self.pv_efficiency
-        power_pv = min(irradiance * self.pv_area * self.pv_efficiency, 10)
+        power_pv = irradiance * self.pv_area * self.pv_efficiency
+        # power_pv = min(irradiance * self.pv_area * self.pv_efficiency, 10)
         # print(f"pv power: {irradiance * self.pv_area * self.pv_efficiency} VS {power_pv} => energy: {power_pv * self.interval}")
         energy_pv = power_pv * self.interval
         return energy_pv
@@ -202,6 +202,55 @@ class EnergyPVEnv(gymnasium.Env):
 
     def calculate_reward(self, action, panel_energy):
         
+        battery = self.battery_level * self.battery_capacity
+        actual = battery + panel_energy
+        needed = action * self.interval * self.e_frame + self.e_idle
+        
+        processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
+        processed = min(processable, action * self.interval)
+        
+        self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
+        self.storage -= processed
+        self.total_frames_processed += processed
+        
+        if(actual > needed):
+            try:
+                return (processed / processable) * 100
+            except:
+                return 0
+        else:
+            return 0
+            
+        
+        if(actual > needed):
+            processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
+            processed = min(processable, action * self.interval)
+            
+            # return int((processed)/ processable)
+            try:
+                return processed / processable
+            except:
+                return -1
+            # return int(processed / self.interval)
+        else:
+            return 0
+        
+        # battery = self.battery_level * self.battery_capacity
+        # requested = action * self.interval
+        # processable = min(self.fps * self.interval, int((battery - self.e_idle + panel_energy) / self.e_frame))
+        
+        # if(requested >= processable):
+        #     self.update_battery_level((battery - self.e_idle + panel_energy - (processable * self.e_frame)))
+        #     self.storage -= processable
+        #     self.total_frames_processed += processable
+        #     return 0
+        # else:
+        #     self.update_battery_level((battery - self.e_idle + panel_energy - (requested * self.e_frame)))
+        #     self.storage -= requested
+        #     self.total_frames_processed += requested
+        #     return (requested / processable) * 100
+        
+        '''
         actual_battery_energy = self.battery_level * self.battery_capacity
 
         frames_per_interval = action * self.interval
@@ -210,24 +259,59 @@ class EnergyPVEnv(gymnasium.Env):
         
         # print(f"actual_battery_energy: {actual_battery_energy} - E_pv: {panel_energy} - needed: {energy_needed}")
         # input(f"Presse enter...")
-                
+        
+        # VERSIONE 2
+        max_processable = max(0, int(((actual_battery_energy + panel_energy) - self.e_idle) / self.e_frame))
+        frames_processed = min(frames_per_interval, max_processable)
+        energy_used = (frames_processed * self.e_frame) + self.e_idle
+        
+        
+        input(f"HALT! requested: {frames_per_interval} - processed: {max_processable}")
+        
+        self.update_battery_level(panel_energy - energy_used)
+        self.storage -= frames_processed
+        self.total_frames_processed += frames_processed
+        
+        # print(f"requested: {frames_per_interval} - processed: {frames_processed}")
+        # input("...")
+        
+        if(frames_per_interval > max_processable):
+            input(f"HALT! requested: {frames_per_interval} - processed: {max_processable}")
+            return 0
+        else:
+            return 1
+        
+        # # REWARD: semplicemente i frame processati
+        # return frames_processed
+        
+        # VERSIONE 1     
         if((actual_battery_energy + panel_energy) >= energy_needed):
             self.update_battery_level(panel_energy - energy_needed)
             self.storage -= frames_per_interval
             self.total_frames_processed += frames_per_interval
-            
-            # return 1
             return frames_per_interval
+            
+            # # compute if other frames might be processed
+            # computable = min(int((actual_battery_energy + panel_energy) / self.e_frame), self.fps * self.interval)
+            # if(computable > frames_per_interval):
+            #     return (frames_per_interval - computable)
+            #     # return -1
+            # else:
+            #     # return 1
+            #     return frames_per_interval
         
         else:
             # self.update_battery_level(panel_energy - self.e_idle)
             processable = int((actual_battery_energy + panel_energy) / self.e_frame)
             # print(f"estimated: {frames_per_interval} - processed: {processable} - ")
             # input("Press ENTER to continue...")
+            # print(f"negative delta: {processable - frames_per_interval}")
             self.storage -= processable
             self.update_battery_level(panel_energy - (self.e_idle + (processable * self.e_frame)))
-            return 0
+            # return -1
+            return (processable - frames_per_interval)
             
+        '''
 
     def get_info(self):
         return {
