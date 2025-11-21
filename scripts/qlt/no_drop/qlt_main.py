@@ -8,29 +8,33 @@ import numpy as np
 # datapath = '../../../dataset/merged_2023-2024.csv'
 datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
 # datapath = '../../../dataset/csv_42.51676443693097_12.526882609673224_fixed_23_180_PT15M.csv'
-battery_capacity = 100             # [Wh]
+battery_capacity = 25            # [Wh]
 storage_capacity = 54000
 power_idle = 2.6                       # [W]
-power_max = 6.0                       # [W]
+power_max = 6.0                    # [W]
 delta_time = 15 * 60                    # [sec]
-proc_interval = (1/6) * 60                 # [sec]                     
+proc_interval = (1) * 60                 # [sec]                     
 pv_efficiency = 0.2
 # pv_area = 10 / (1200 * pv_efficiency)
-pv_area = (0.25)
-fps = 30
-seed = "linear"
+pv_area = (0.5)
+fps = 15
+
+# seed = "fixed_winter"
+seed = "fixed_summer"
+# seed = "linear"
+
 max_irradiation = 1000
 
 battery_bins = 10
-time_bins = 24
+time_bins = 10
 alpha = 0.05
 gamma = 0.9
-eps_min = 0.05
-eps_dec = 0.97
+eps_min = 0.1
+eps_dec = 0.99
 eps_init = 1.0
 
-episodes = 365
-# episodes = 730
+# episodes = 365
+episodes = 365*3
 
 
 def multiple_train(num_agents):
@@ -244,6 +248,12 @@ def single_train():
 
     results = agent.train()
     rewards.append(results[0])
+    
+    # seed = "fixed_winter"
+    
+    # new_res = agent.train()
+    # for elem in new_res:
+    #     results.append(elem)
 
     plt.suptitle("Q-Learning tabular - rewards")
     plt.title(f"B = {battery_capacity}, fps = {fps}, p_I = {power_idle}, p_F = {power_max}")

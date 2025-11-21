@@ -78,8 +78,12 @@ class EnergyPVEnv(gymnasium.Env):
         self.pv_efficiency = pv_efficiency                          # [%]
         
         # energy params
+        self.p_idle = power_idle
         self.e_idle = power_idle * proc_interval                    # [Ws = J over defined interval]
-        self.e_frame = ((power_max - power_idle) / fps)                           # [Ws = J] per singolo frame in un secondo, da rivedere
+        self.e_frame = ((power_max - power_idle) / 30)                           # [Ws = J] per singolo frame in un secondo, da rivedere
+        # self.e_frame = ((power_max - power_idle) / 30)
+        
+        self.energy_consumption = 0.0
         
         self.irrad = 0                                              # [W/m^2]
         self.max_irrad = max_irradiation                            # [W/m^2]
@@ -127,12 +131,26 @@ class EnergyPVEnv(gymnasium.Env):
             super().reset()
             self.day = (self.day + 1) % 365
         
-        self.battery_level = 0.5
+        elif seed == "fixed_summer":
+            super().reset()
+            self.day = 172
+        
+        elif seed == "fixed_winter":
+            super().reset()
+            self.day = 355
+            
+        elif isinstance(seed, int):
+            super().reset()
+            self.day = seed % 365
+        
+        self.battery_level = 0.8
         self.storage = 0
         
         self.inner_step = 0
         self.current_step = 0
         self.irrad = self.get_irradiance()
+        
+        self.energy_consumption = 0.0
 
         self.total_frames_processed = 0
         self.total_frames_dropped = 0
@@ -200,8 +218,8 @@ class EnergyPVEnv(gymnasium.Env):
         else:
             self.battery_level = self.battery_level + normalized_value
 
+    
     def calculate_reward(self, action, panel_energy):
-        
         battery = self.battery_level * self.battery_capacity
         actual = battery + panel_energy
         needed = action * self.interval * self.e_frame + self.e_idle
@@ -213,27 +231,104 @@ class EnergyPVEnv(gymnasium.Env):
         self.storage -= processed
         self.total_frames_processed += processed
         
-        if(actual > needed):
+        if(actual > needed and self.battery_level > 0.0):
             try:
-                return (processed / processable) * 100
+                return (processed / processable) * 100 * self.battery_level
             except:
                 return 0
         else:
+            return -100
+
+        # if(processable > 0):
+        #     try:
+        #         return processed
+        #     except:
+        #         return 0
+        
+        return 0    
+    
+    # (G)old 
+    def calculate_reward_old(self, action, panel_energy):
+                
+        battery = self.battery_level * self.battery_capacity
+        actual = battery + panel_energy
+        
+        # if self.irrad < 0.1 and self.battery_level < 0.35:
+        # # Override dell'azione
+        #     processed = 0
+            
+        #     # Consuma solo idle
+        #     self.update_battery_level(panel_energy - self.e_idle)
+        #     self.energy_consumption = self.e_idle
+        #     self.storage += (self.fps * self.interval)
+        #     self.total_frames_processed += 0
+            
+        #     # Reward minimo (non zero per non confondere)
+        #     return 0.1
+        
+        needed = action * self.interval * self.e_frame + self.e_idle
+        
+        processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
+        processed = min(processable, action * self.interval)
+        
+        self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
+        
+        self.energy_consumption = (processed * self.e_frame) + self.e_idle
+        
+        self.storage -= processed
+        self.total_frames_processed += processed
+        
+        reward = 0
+
+        # if(processable == 0 or self.battery_level <= 0.2):
+        #     reward = 0
+        # elif(processable > 0):
+        #     reward = round((self.battery_level ** 2) * (processed/processable) * processed, 2)
+        
+        if(processable == 0):
+          return 0  
+        
+        if(self.battery_level <= 0.2):
+            try:
+                return round((self.battery_level ** 2) * (processed/processable), 2)
+            except:
+                return 0
+        
+        try:
+            return round((self.battery_level ** 1) * (processed/processable), 2)
+        except:
             return 0
+            
+        # return reward
+
+        # if(processable > 0):
+        #     efficiency = processed / processable
+        #     # reward = processed * efficiency * self.battery_level
+        #     reward = (processed / processable) * processed * (self.battery_level ** 2)
+
+        # return reward
+        
+        # if(actual > needed):
+        #     try:
+        #         return (processed / processable) * 100
+        #     except:
+        #         return 0
+        # else:
+        #     return 0
             
         
-        if(actual > needed):
-            processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
-            processed = min(processable, action * self.interval)
+        # if(actual > needed):
+        #     processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
+        #     processed = min(processable, action * self.interval)
             
-            # return int((processed)/ processable)
-            try:
-                return processed / processable
-            except:
-                return -1
-            # return int(processed / self.interval)
-        else:
-            return 0
+        #     # return int((processed)/ processable)
+        #     try:
+        #         return processed / processable
+        #     except:
+        #         return -1
+        #     # return int(processed / self.interval)
+        # else:
+        #     return 0
         
         # battery = self.battery_level * self.battery_capacity
         # requested = action * self.interval
@@ -320,6 +415,7 @@ class EnergyPVEnv(gymnasium.Env):
             'battery_level': self.battery_level,
             'battery_wh': self.battery_level * self.battery_capacity,
             'storage_level': self.storage,
+            'energy_consumption': self.energy_consumption,
             'day': self.day,
             'frames_processed': self.total_frames_processed,
             'frames_dropped': self.total_frames_dropped,

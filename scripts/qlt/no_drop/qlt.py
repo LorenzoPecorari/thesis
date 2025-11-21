@@ -110,6 +110,9 @@ class Agent:
         battery = []
         battery_traces = []
         
+        energy = []
+        energy_traces = []
+        
         irradiance = []
         daily_irradiance = []
 
@@ -124,8 +127,11 @@ class Agent:
             storage_temp = 0
             action_avg = 0
             
-            action_trace = []
+            action_trace = []        
+            daily_energy = []
+            energy.append(0.0)
             battery_trace = []            
+        
             trace = []
             info = {}
 
@@ -146,6 +152,9 @@ class Agent:
                 else:
                     daily_irradiance[j] += info['irradiance'] * self.env.max_irrad
                 
+                daily_energy.append(info['energy_consumption'])
+                energy[episode] += info['energy_consumption']
+                
                 # if(reward < action * self.env.interval):
                 #     action = int(reward / self.env.interval) 
                 
@@ -155,25 +164,30 @@ class Agent:
                 storage_temp += info['storage_level']
                 battery_trace.append(info['battery_level'] * 100)
                 
-                
                 action_avg += action
                 action_trace.append(action)
 
                 trace.append(partial_reward)
                 # input("Press enter to continue...")
             
-            if(episode % 90 == 0):
+            
+            if(episode % 200 == 0):
                 cumulative_traces.append(trace)
                 battery_traces.append(battery_trace)
                 action_traces.append(action_trace)
+                energy_traces.append(daily_energy)
             
-            print(f"episode: {episode}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
+            
+            # print(f"episode: {episode}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
+            print(f"episode: {episode}/{self.episodes} - reward: {round(partial_reward, 1)} - avg_batt: {round(battery_avg / self.env.max_steps, 2)} - eps: {self.eps}")
             # print(f"dropped: {info['frames_dropped']} - processed : {info['frames_processed']} - avg battery : {battery_avg / self.env.max_steps} - avg irradiance: {avg_irrad / self.env.max_steps}")
             # dropped_frames.append(info['frames_dropped'])
-            processed_frames.append(info['frames_processed'])
+            
             battery.append(((battery_avg) / self.env.max_steps))
             irradiance.append(((avg_irrad ) / self.env.max_steps) * self.env.max_irrad)
+            
             actions.append(action_avg / self.env.max_steps)
+            processed_frames.append(info['frames_processed'])
             storage.append(info['storage_level'])
             processed_stored_ratio.append(info['frames_processed'] / info['storage_level'])
             
@@ -187,6 +201,9 @@ class Agent:
         self.plot_daily_action(action_traces)
         
         self.plot_battery(battery)
+        
+        self.plot_daily_energy_consumption(energy_traces)
+        
         self.plot_action(actions)
         self.plot_processed_stored_ratio(processed_stored_ratio)
         
@@ -204,7 +221,7 @@ class Agent:
         plt.ylabel("Reward")
         
         for i in range(len(data)):
-            plt.plot(data[i], label = f"{str(i*90)}-th episode")
+            plt.plot(data[i], label = f"{str(i * 200)}-th episode")
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -219,18 +236,19 @@ class Agent:
         plt.xlabel("Step")
         plt.ylabel("Battery")
         
+        # plt.ylim(-0.5, 10)
+        
         for i in range(len(data)):
-            plt.plot(data[i], label = f"{str(i * 90)}-th episode" )
+            plt.plot(data[i], label = f"{str(i * 200)}-th episode" )
         
         plt.grid()
-        plt.legend()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
         plt.savefig(f"battery_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()  
         
     def plot_daily_action(self, data):
-        window = 90        
+        window = 100        
         plt.suptitle("Q-Learning tabular - Daily FPS")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
 
@@ -238,7 +256,7 @@ class Agent:
         plt.ylabel("FPS")
         
         for i in range(len(data)):
-            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * 90)}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * 200)}-th episode", alpha = 1.0)
 
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -261,7 +279,26 @@ class Agent:
         plt.legend()
         plt.savefig(f"daily_irradiance.pdf")
         plt.close()
-            
+    
+    def plot_daily_energy_consumption(self, data):
+        plt.title("Daily energy consumption")
+        plt.xlabel("Steps")
+        plt.ylabel("Energy (J)")
+        
+        window = 90
+        n = len(data)
+        
+        for i in range(n):
+            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window) / window, mode='valid'), label = f"{i * 200}-th episode", alpha = 1.0)
+        
+        plt.grid()
+        # plt.legend()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
+        plt.tight_layout()
+        plt.savefig(f"daily_consumption.pdf")
+        plt.close()
+    
+    
     ### training metrics
 
     def plot_rewards(self, data):
@@ -395,7 +432,7 @@ class Agent:
         plt.ylabel("storage")
         
         for i in range(len(storage_traces)):
-            plt.plot(storage_traces[i], label = f"{str(i * 90)}-th ep." )
+            plt.plot(storage_traces[i], label = f"{str(i * 200)}-th ep." )
         
         plt.grid()
         plt.legend()
