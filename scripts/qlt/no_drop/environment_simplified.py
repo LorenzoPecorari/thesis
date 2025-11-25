@@ -234,10 +234,12 @@ class EnergyPVEnv(gymnasium.Env):
         if(actual > needed and self.battery_level > 0.0):
             try:
                 return (processed / processable) * 100 * self.battery_level
+                # return processed / processable
             except:
                 return 0
         else:
             return -100
+            # return -100
 
         # if(processable > 0):
         #     try:

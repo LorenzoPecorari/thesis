@@ -16,11 +16,11 @@ delta_time = 15 * 60                    # [sec]
 proc_interval = (1) * 60                 # [sec]                     
 pv_efficiency = 0.2
 # pv_area = 10 / (1200 * pv_efficiency)
-pv_area = (0.5)
+pv_area = (1.0)
 fps = 15
 
-# seed = "fixed_winter"
-seed = "fixed_summer"
+seed = "fixed_winter"
+# seed = "fixed_summer"
 # seed = "linear"
 
 max_irradiation = 1000
@@ -29,12 +29,12 @@ battery_bins = 10
 time_bins = 10
 alpha = 0.05
 gamma = 0.9
-eps_min = 0.1
-eps_dec = 0.99
+eps_min = 0.05
+eps_dec = 0.997
 eps_init = 1.0
 
 # episodes = 365
-episodes = 365*3
+episodes = 365*5
 
 
 def multiple_train(num_agents):

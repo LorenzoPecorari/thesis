@@ -57,8 +57,8 @@ class Agent:
         self.episodes = episodes
         self.battery_capacity = battery_capacity
         
-        # 3d table, |battery_levls| x |time_levels| x |actions|        
-        self.table = np.zeros((battery_bins, time_bins, (int(self.fps / 5) + 1)))
+        # 3d table, |battery_levls| x |time_levels| x |actions|
+        self.table = np.zeros((battery_bins, time_bins, self.fps + 1))
 
     def choice_action(self, state, eps):
         b_idx, t_idx = self.state_discretization(state[0], state[1])
@@ -67,7 +67,7 @@ class Agent:
         # print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
         if np.random.random() < eps:
             # print("RANDOM")
-            return random.randint(0, int(self.fps / 5))
+            return random.randint(0, self.fps)
         else:
             # print("DECIDED")
             return np.argmax(self.table[b_idx, t_idx])
@@ -119,8 +119,6 @@ class Agent:
         actions = []
         action_traces = []
         
-        discharges = []
-        
         for episode in range(self.episodes + 1):
             state, _ = self.env.reset(self.seed)
             partial_reward = 0
@@ -128,7 +126,6 @@ class Agent:
             avg_irrad = 0
             storage_temp = 0
             action_avg = 0
-            discharge = 0
             
             action_trace = []        
             daily_energy = []
@@ -143,8 +140,8 @@ class Agent:
             for j in range(self.env.max_steps):
                 state = self.state_discretization(state[0], state[1])
                 action = self.choice_action(state, self.eps)
-
-                new_state, reward, terminated, truncated, info = self.env.step(action * 5)
+                
+                new_state, reward, terminated, truncated, info = self.env.step(action)
 
                 self.update_table(state, new_state, action, reward)
                 partial_reward += reward
@@ -167,13 +164,8 @@ class Agent:
                 storage_temp += info['storage_level']
                 battery_trace.append(info['battery_level'] * 100)
                 
-                action_avg += (action * 5)
-                action_trace.append(action * 5)
-
-                # print(info['battery_level'])
-
-                if(info['battery_level'] == 0.0):
-                    discharge += 1
+                action_avg += action
+                action_trace.append(action)
 
                 trace.append(partial_reward)
                 # input("Press enter to continue...")
@@ -198,7 +190,6 @@ class Agent:
             processed_frames.append(info['frames_processed'])
             storage.append(info['storage_level'])
             processed_stored_ratio.append(info['frames_processed'] / info['storage_level'])
-            discharges.append(discharge)
             
             # self.save_table(episode)
             
@@ -218,8 +209,6 @@ class Agent:
         
         self.plot_irradiance(irradiance)
         self.plot_daily_irradiation(daily_irradiance)
-        
-        self.plot_battery_violations(discharges)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
@@ -309,22 +298,6 @@ class Agent:
         plt.savefig(f"daily_consumption.pdf")
         plt.close()
     
-    def plot_battery_violations(self, data):
-        window = 10        
-        plt.suptitle("Q-Learning tabular - Complete discharges")
-        plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
-
-        plt.xlabel("Step")
-        plt.ylabel("Discarges")
-        
-        # for i in range(len(data)):
-        plt.plot(range(window - 1, len(data)), np.convolve(data, np.ones(window)/window, mode='valid'), label = f"smooth", alpha = 1.0)
-
-        plt.grid()
-        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
-        plt.tight_layout()
-        plt.savefig(f"discharges_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
-        plt.close()
     
     ### training metrics
 
@@ -466,8 +439,7 @@ class Agent:
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
         plt.savefig(f"storage_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
-        plt.close()
-
+        plt.close()  
             
     # def save_table(self, episode, battery_bins, time_bins):
     #     array_drop = []
