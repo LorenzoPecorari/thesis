@@ -175,11 +175,10 @@ class Agent:
                 if(info['battery_level'] == 0.0):
                     discharge += 1
 
-                trace.append(partial_reward)
                 # input("Press enter to continue...")
             
             
-            if(episode % 200 == 0):
+            if(episode % 50 == 0):
                 cumulative_traces.append(trace)
                 battery_traces.append(battery_trace)
                 action_traces.append(action_trace)
@@ -197,7 +196,12 @@ class Agent:
             actions.append(action_avg / self.env.max_steps)
             processed_frames.append(info['frames_processed'])
             storage.append(info['storage_level'])
-            processed_stored_ratio.append(info['frames_processed'] / info['storage_level'])
+            
+            try:
+                processed_stored_ratio.append(info['frames_processed'] / info['storage_level'])
+            except:
+                processed_stored_ratio.append(0)
+                
             discharges.append(discharge)
             
             # self.save_table(episode)
@@ -232,7 +236,7 @@ class Agent:
         plt.ylabel("Reward")
         
         for i in range(len(data)):
-            plt.plot(data[i], label = f"{str(i * 200)}-th episode")
+            plt.plot(data[i], label = f"{str(i * 50)}-th episode")
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -250,7 +254,7 @@ class Agent:
         # plt.ylim(-0.5, 10)
         
         for i in range(len(data)):
-            plt.plot(data[i], label = f"{str(i * 200)}-th episode" )
+            plt.plot(data[i], label = f"{str(i * 50)}-th episode" )
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -267,7 +271,7 @@ class Agent:
         plt.ylabel("FPS")
         
         for i in range(len(data)):
-            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * 200)}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * 50)}-th episode", alpha = 1.0)
 
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -300,7 +304,7 @@ class Agent:
         n = len(data)
         
         for i in range(n):
-            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window) / window, mode='valid'), label = f"{i * 200}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window) / window, mode='valid'), label = f"{i * 50}-th episode", alpha = 1.0)
         
         plt.grid()
         # plt.legend()
@@ -459,7 +463,7 @@ class Agent:
         plt.ylabel("storage")
         
         for i in range(len(storage_traces)):
-            plt.plot(storage_traces[i], label = f"{str(i * 200)}-th ep." )
+            plt.plot(storage_traces[i], label = f"{str(i * 50)}-th ep." )
         
         plt.grid()
         plt.legend()

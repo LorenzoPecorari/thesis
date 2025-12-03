@@ -80,7 +80,7 @@ class EnergyPVEnv(gymnasium.Env):
         # energy params
         self.p_idle = power_idle
         self.e_idle = power_idle * proc_interval                    # [Ws = J over defined interval]
-        self.e_frame = ((power_max - power_idle) / 30)                           # [Ws = J] per singolo frame in un secondo, da rivedere
+        self.e_frame = (((power_max - power_idle) - (0.2*(power_max - power_idle))) / fps)                           # [Ws = J] per singolo frame in un secondo, da rivedere
         # self.e_frame = ((power_max - power_idle) / 30)
         
         self.energy_consumption = 0.0
@@ -172,7 +172,7 @@ class EnergyPVEnv(gymnasium.Env):
         
         self.irrad = self.get_irradiance()
         e_pv = self.get_pv_energy(self.irrad * self.max_irrad)
-        self.storage += (self.fps * self.interval)
+        self.storage += (15 * self.interval)
         
         reward = self.calculate_reward(action, e_pv)
         
@@ -225,7 +225,7 @@ class EnergyPVEnv(gymnasium.Env):
         needed = action * self.interval * self.e_frame + self.e_idle
         
         processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
-        processed = min(processable, action * self.interval)
+        processed = min(processable, action * self.interval, self.storage)
         
         self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
         self.storage -= processed

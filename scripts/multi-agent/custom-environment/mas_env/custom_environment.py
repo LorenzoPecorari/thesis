@@ -1,0 +1,243 @@
+from pettingzoo import ParallelEnv
+from gymnasium import spaces
+from copy import copy
+
+import functools
+import numpy as np
+import random
+import interpol as ip
+
+
+class CustomEnvironment(ParallelEnv):
+    metadata = {
+        "name": "custom_environment_v0",
+    }
+
+    def __init__(self, num_agents, irradiance_datapaths, delta_time, proc_interval, proc_rate, arr_rate, batteries, panel_surfaces, power_idle, power_max):
+        super().__init__()
+        
+        self.agents = []
+        self._num_agents = num_agents
+        self._processing_rate = proc_rate
+        self._arrival_rate = arr_rate
+        self._proc_interval = proc_interval
+        
+        self.max_irrad = 1000.0
+        self.panel_efficiency = 0.2
+        
+        self.irradiance_data = []
+        for filepath in irradiance_datapaths:
+            self.irradiance_data.append(ip.interpolate(filepath, delta_time, proc_interval))
+        
+        self.irradiance_level = [0.0 for i in range(0, self._num_agents)]
+        
+        self.possible_agents = [i for i in range(0, self._num_agents)]
+        
+        self.battery_capacities = [(battery*3600) for battery in batteries]
+        self.battery_energies = [0.0 for i in range(0, self._num_agents)]
+        self.panel_surfaces = panel_surfaces
+        
+        self.e_idle = power_idle * self._proc_interval
+        self.e_frame = (0.8 * (power_max - power_idle) * self._proc_interval) / proc_rate
+        self.e_tx_rx = (0.2 * (power_max - power_idle) * self._proc_interval) / proc_rate
+        
+        # state_i = (battery_level_i, daily_completion_i)
+        self.states = [[0.0, 0.0] for i in range(0, self._num_agents)]
+        self.actions = [[0.0, 0, 0.0, 0.0] for i in range(0, self._num_agents)]
+        self.rewards = [0 for i in range(0, self._num_agents)]
+        
+        # internal counters for episode compeltion 
+        self.timestep = 0
+        self.max_steps = 0
+        self.episode = 0
+        
+        try:
+            self.max_steps = int(24 * 60 * 60 / proc_interval)
+        except:
+            self.max_steps = 1
+
+        # observation_space: [b_1, t_1, b_2, t_2, ..., b_n, t_n]
+        # for each agent there are two variables in the range [0.0, 1.0] where
+            # b_i -> "battery level"
+            # t_i -> "episode completion"
+        self._action_spaces = {
+            agent: spaces.MultiDiscrete([self._processing_rate + 1, 3, self._num_agents, self._processing_rate + 1]) for agent in self.possible_agents
+        }
+        
+        # action_space: [f_i, x_i, g_i, h_i] where
+            # f_i -> "local framerate"
+            # x_i -> "offloading mode"
+            # g_i -> "target node"
+            # h_i -> "offloading framerate"
+        self._observation_spaces = {
+            agent: spaces.Box(low = 0.0, high = 1.0, shape = (self._num_agents * 2, ), dtype = np.float64) for agent in self.possible_agents
+        }
+        
+    # function for evaluating reward over frames management
+    def calculate_reward_frames(self, fti, hti):
+        if((fti + hti) <= self._processing_rate):
+            return 1
+        return 0
+        
+    # function for evaluating reward over battery management
+    def calculate_reward_battery(self, fti, xti, hti, eb_t, ef_loc, e_tx_rx, pv):
+        if(xti == 0 and ((fti * ef_loc * self._proc_interval) < (eb_t + pv))):
+            return 1
+        elif(xti == 1 and (((fti * ef_loc * self._proc_interval) + (hti * e_tx_rx * self._proc_interval)) < (eb_t + pv))):
+            return 1
+        elif(xti == 2 and (((fti * ef_loc * self._proc_interval) + ((hti * (ef_loc + e_tx_rx) * self._proc_interval))) < (eb_t + pv))):
+            return 1
+        
+        return 0
+        
+    # function for evaluating correctness of cooperations between nodes
+    def calculate_reward_cooperation(self, agent_id, xti, gti, xt_gti, gt_gti):
+        if(xti == 0 and gti == 0):
+            return 1
+        elif(xti == 1 and gti != 0 and gti != agent_id and xt_gti == 2 and gt_gti == agent_id):
+            return 1
+        elif(xti == 2 and gti != 0 and gti != agent_id and xt_gti == 1 and gt_gti == agent_id):
+            return 1
+        
+        return 0
+    
+        
+    def calculate_reward(self, agent_id):
+        print(self.actions[agent_id])
+        
+        fti = self.actions[agent_id][0]
+        xti = self.actions[agent_id][1]
+        gti = self.actions[agent_id][2]
+        hti = self.actions[agent_id][3]
+        
+        # print(f"agent_id: {agent_id} - fti: {fti} - xti: {xti} - gti: {gti} - hti: {hti}")
+        
+        xt_gti = self.actions[gti][1]
+        gt_gti = self.actions[gti][2]
+        
+        idx = self.episode * self.max_steps + self.timestep
+        self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
+        
+        reward_frames = self.calculate_reward_frames(fti, hti)
+        reward_battery = self.calculate_reward_battery(
+                            fti,
+                            xti,
+                            hti,
+                            self.battery_capacities[agent_id],
+                            self.e_frame,
+                            self.e_tx_rx,
+                            self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
+                            )
+        reward_cooperation = self.calculate_reward_cooperation(agent_id, xti, gti, xt_gti, gt_gti)
+        
+        return reward_frames + reward_battery + reward_cooperation
+        
+    def reset(self, seed=None, options=None):
+        self.agents = copy(self.possible_agents)
+        
+        # setting to 0 all training variables
+        self.timestep = 0
+        self.states = [[0.5, 0.0] for i in range(0, self._num_agents)]
+        self.actions = [[0.0, 0, 0.0, 0.0] for i in range(0, self._num_agents)]
+        self.battery_energies = [self.battery_capacities[i] / 2 for i in range(0, self._num_agents)]
+
+        observations = {
+            a: (
+                np.array([val for sublist in self.states for val in sublist], dtype=np.float64)
+            )
+            for a in self.agents
+        }
+
+        infos = {a: {} for a in self.agents}
+
+        return observations, infos
+        
+    def update_states(self):
+        # for each agent, update its state on the basis of the actions it executes
+        for agent_id in range(0, self._num_agents):
+            fti = self.actions[agent_id][0]
+            xti = self.actions[agent_id][1]
+            gti = self.actions[agent_id][2]
+            hti = self.actions[agent_id][3]
+            
+            xt_gti = self.actions[gti][1]
+            gt_gti = self.actions[gti][2]
+            ht_gti = self.actions[gti][3]
+            
+            idx = self.episode * self.max_steps + self.timestep
+            self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 5)
+            panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_efficiency * self.panel_surfaces[agent_id] * self._proc_interval        
+            # energy of local computation
+            comp_energy = fti * self._proc_interval * self.e_frame + self.e_idle
+            
+            # if it accepts the load of another node, compute the auxiliary effort
+            if(xti == 2 and xt_gti == 1 and gti != 0 and gti != agent_id and gt_gti == agent_id):
+                comp_energy += (min(ht_gti, hti) * self.e_frame + min(ht_gti, hti) * self.e_tx_rx)
+            # if it needs to send the load to another node, add energy needed for data exchange
+            elif(xti == 1 and xt_gti == 2 and gti != 0 and gti != agent_id and gt_gti == agent_id):
+                comp_energy += min(ht_gti, hti) * self.e_tx_rx
+                
+            # if computational energy is higher than the residual one, drop to zero, otherwise update battery level directly on state structure
+            if(comp_energy > (self.battery_energies[agent_id] + panel_energy)):
+                self.states[agent_id][0] = 0.0
+                self.battery_energies[agent_id] = 0.0
+            else:
+                self.battery_energies[agent_id] += (panel_energy - comp_energy)
+                self.battery_energies[agent_id] = min(self.battery_energies[agent_id], self.battery_capacities[agent_id])
+                self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
+            
+            self.states[agent_id][1] = round(self.timestep / self.max_steps, 4) 
+            
+            print(f"agent: {agent_id} -> battery: [{self.battery_energies[agent_id]} - {self.states[agent_id][0]}], panel_power: {self.panel_efficiency * self.panel_surfaces[agent_id] * self.irradiance_level[agent_id] * self.max_irrad}, irradiance: {self.irradiance_level[agent_id] * self.max_irrad}")
+
+    def step(self, actions):
+        # manual copy of actions inside internal actions variable
+        for i in range(0, self._num_agents):
+            for j in range(0, len(actions[i])):
+                self.actions[i][j] = actions[i][j]
+
+        # for each agent is returned the reward according the reward function defined a priori        
+        rewards = {a: self.calculate_reward(a) for a in self.agents}
+               
+        terminations = {a: False for a in self.agents}
+        truncations = {a: False for a in self.agents}
+        
+        if(self.timestep == (self.max_steps - 1)):
+            self.episode += 1
+            truncations = {a: True for a in self.agents}
+        
+        self.timestep += 1
+        
+        # update of states after receiving all actions
+        self.update_states()
+        
+        # observations structure is a dictionary with keys the indeces of agents
+        observations = {
+            a: (
+                np.array([val for sublist in self.states for val in sublist], dtype=np.float64)
+            )
+            for a in self.agents
+        }
+        
+        infos = {a: {} for a in self.agents}
+        
+        if any(terminations.values()) or all(truncations.values()):
+            self.agents = []
+        
+        return observations, rewards, terminations, truncations, infos
+
+    def render(self):
+        pass
+
+    @functools.lru_cache(maxsize=None)
+    def observation_space(self, agent):
+        return self._observation_spaces[agent]
+
+    @functools.lru_cache(maxsize=None)
+    def action_space(self, agent):
+        return self._action_spaces[agent]
+    
+    def observe(self, agent):
+        return np.array(self.observations[agent])
+     
+    
