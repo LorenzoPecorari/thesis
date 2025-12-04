@@ -22,6 +22,9 @@ class CustomEnvironment(ParallelEnv):
         self._arrival_rate = arr_rate
         self._proc_interval = proc_interval
         
+        self.p_idle = power_idle
+        self.p_max = power_max
+        
         self.max_irrad = 1000.0
         self.panel_efficiency = 0.2
         
@@ -103,7 +106,7 @@ class CustomEnvironment(ParallelEnv):
     
         
     def calculate_reward(self, agent_id):
-        print(self.actions[agent_id])
+        # print(self.actions[agent_id])
         
         fti = self.actions[agent_id][0]
         xti = self.actions[agent_id][1]
@@ -188,7 +191,7 @@ class CustomEnvironment(ParallelEnv):
             
             self.states[agent_id][1] = round(self.timestep / self.max_steps, 4) 
             
-            print(f"agent: {agent_id} -> battery: [{self.battery_energies[agent_id]} - {self.states[agent_id][0]}], panel_power: {self.panel_efficiency * self.panel_surfaces[agent_id] * self.irradiance_level[agent_id] * self.max_irrad}, irradiance: {self.irradiance_level[agent_id] * self.max_irrad}")
+            # print(f"agent: {agent_id} -> battery: [{self.battery_energies[agent_id]} - {self.states[agent_id][0]}], panel_power: {self.panel_efficiency * self.panel_surfaces[agent_id] * self.irradiance_level[agent_id] * self.max_irrad}, irradiance: {self.irradiance_level[agent_id] * self.max_irrad}")
 
     def step(self, actions):
         # manual copy of actions inside internal actions variable
