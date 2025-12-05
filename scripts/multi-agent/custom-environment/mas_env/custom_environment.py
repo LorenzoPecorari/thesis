@@ -1,5 +1,6 @@
 from pettingzoo import ParallelEnv
 from gymnasium import spaces
+import matplotlib.pyplot as plt
 from copy import copy
 
 import functools
@@ -32,6 +33,9 @@ class CustomEnvironment(ParallelEnv):
         for filepath in irradiance_datapaths:
             self.irradiance_data.append(ip.interpolate(filepath, delta_time, proc_interval))
         
+        for elem in self.irradiance_data:
+            print(len(elem))
+        
         self.irradiance_level = [0.0 for i in range(0, self._num_agents)]
         
         self.possible_agents = [i for i in range(0, self._num_agents)]
@@ -51,8 +55,8 @@ class CustomEnvironment(ParallelEnv):
         
         # internal counters for episode compeltion 
         self.timestep = 0
-        self.max_steps = 0
-        self.episode = 0
+        self.max_steps = 1440
+        self.episode = 172
         
         try:
             self.max_steps = int(24 * 60 * 60 / proc_interval)
@@ -76,22 +80,43 @@ class CustomEnvironment(ParallelEnv):
             agent: spaces.Box(low = 0.0, high = 1.0, shape = (self._num_agents * 2, ), dtype = np.float64) for agent in self.possible_agents
         }
         
+        self.fs = [0 for i in range(0, self._num_agents)]
+        self.hs = [0 for i in range(0, self._num_agents)]
+        
     # function for evaluating reward over frames management
     def calculate_reward_frames(self, fti, hti):
+        # return min(1, (fti + hti)/self._processing_rate)
+        
         if((fti + hti) <= self._processing_rate):
-            return 1
-        return 0
+            return min(1, (fti + hti)/self._processing_rate)
+        else:
+            return 0
+        
+        # if((fti + hti) < self._processing_rate):
+        #     return 1
+        # else:
+        #     return 0
         
     # function for evaluating reward over battery management
     def calculate_reward_battery(self, fti, xti, hti, eb_t, ef_loc, e_tx_rx, pv):
         if(xti == 0 and ((fti * ef_loc * self._proc_interval) < (eb_t + pv))):
-            return 1
+            return min((fti * ef_loc * self._proc_interval)/(eb_t + pv), 1)
         elif(xti == 1 and (((fti * ef_loc * self._proc_interval) + (hti * e_tx_rx * self._proc_interval)) < (eb_t + pv))):
-            return 1
+            return min(1, ((fti * ef_loc * self._proc_interval) + (hti * e_tx_rx * self._proc_interval))/(eb_t + pv))
         elif(xti == 2 and (((fti * ef_loc * self._proc_interval) + ((hti * (ef_loc + e_tx_rx) * self._proc_interval))) < (eb_t + pv))):
-            return 1
-        
+            return min(1, (((fti + hti) * ef_loc * self._proc_interval) + ((hti * (ef_loc + e_tx_rx) * self._proc_interval)))/(eb_t + pv))
+        # 
         return 0
+        
+        
+        # if(xti == 0 and ((fti * ef_loc * self._proc_interval) < (eb_t + pv))):
+        #     return 1
+        # elif(xti == 1 and (((fti * ef_loc * self._proc_interval) + (hti * e_tx_rx * self._proc_interval)) < (eb_t + pv))):
+        #     return 1
+        # elif(xti == 2 and (((fti * ef_loc * self._proc_interval) + ((hti * (ef_loc + e_tx_rx) * self._proc_interval))) < (eb_t + pv))):
+        #     return 1
+        
+        # return 0
         
     # function for evaluating correctness of cooperations between nodes
     def calculate_reward_cooperation(self, agent_id, xti, gti, xt_gti, gt_gti):
@@ -118,7 +143,8 @@ class CustomEnvironment(ParallelEnv):
         xt_gti = self.actions[gti][1]
         gt_gti = self.actions[gti][2]
         
-        idx = self.episode * self.max_steps + self.timestep
+        idx = (self.episode * self.max_steps) + self.timestep
+        # print(idx)
         self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
         
         reward_frames = self.calculate_reward_frames(fti, hti)
@@ -142,7 +168,7 @@ class CustomEnvironment(ParallelEnv):
         self.timestep = 0
         self.states = [[0.5, 0.0] for i in range(0, self._num_agents)]
         self.actions = [[0.0, 0, 0.0, 0.0] for i in range(0, self._num_agents)]
-        self.battery_energies = [self.battery_capacities[i] / 2 for i in range(0, self._num_agents)]
+        self.battery_energies = [(self.battery_capacities[i] / 2) for i in range(0, self._num_agents)]
 
         observations = {
             a: (
@@ -152,12 +178,15 @@ class CustomEnvironment(ParallelEnv):
         }
 
         infos = {a: {} for a in self.agents}
+        
+        self.episode = 172
 
         return observations, infos
         
     def update_states(self):
         # for each agent, update its state on the basis of the actions it executes
         for agent_id in range(0, self._num_agents):
+
             fti = self.actions[agent_id][0]
             xti = self.actions[agent_id][1]
             gti = self.actions[agent_id][2]
@@ -166,6 +195,9 @@ class CustomEnvironment(ParallelEnv):
             xt_gti = self.actions[gti][1]
             gt_gti = self.actions[gti][2]
             ht_gti = self.actions[gti][3]
+
+            self.fs[agent_id] += fti
+            self.hs[agent_id] += hti
             
             idx = self.episode * self.max_steps + self.timestep
             self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 5)
@@ -206,7 +238,7 @@ class CustomEnvironment(ParallelEnv):
         truncations = {a: False for a in self.agents}
         
         if(self.timestep == (self.max_steps - 1)):
-            self.episode += 1
+            self.episode = 172
             truncations = {a: True for a in self.agents}
         
         self.timestep += 1

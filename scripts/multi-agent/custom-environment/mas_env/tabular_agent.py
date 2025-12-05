@@ -65,8 +65,9 @@ class TabularAgent:
         # print(f"state: {state}")
         
         for agent in range(0, self.num_agents):
-            battery_idx = int(min(state[agent][0] * self.battery_bins, self.battery_bins - 1))
-            time_idx = int(min(state[agent][1] * self.time_bins, self.time_bins - 1))
+            # print(state[2*agent], state[2*agent+1])
+            battery_idx = int(min(state[2*agent] * self.battery_bins, self.battery_bins - 1))
+            time_idx = int(min(state[2*agent + 1] * self.time_bins, self.time_bins - 1))            
             
             indeces.append(battery_idx)
             indeces.append(time_idx)
@@ -85,10 +86,12 @@ class TabularAgent:
                     ])
         else:
             state_idx = self.state_discretization(state)
-            q_values = self.table
-            for elem in state_idx:
-                q_values = q_values[elem]
-            
+            # q_values = self.table
+            # for elem in state_idx:
+            #     q_values = q_values[elem]
+
+            q_values = self.table[*state_idx]
+
             best_value = -1
             best_action = [0, 0, 0, 0]
             
@@ -119,14 +122,13 @@ class TabularAgent:
         # for elem in next_state_idx:
         #     next_q_values = next_q_values[elem]
         
-        best_next_value = -1
-        
-        for f in range(0, self.max_fps+1):
-                for x in range(0, 3):
-                    for g in range(0, self.num_agents):
-                        for h in range(0, self.max_fps + 1):
-                            if(next_q_value[f][x][g][h] > best_next_value):
-                                best_next_value = next_q_value[f][x][g][h]
+        best_next_value = np.max(next_q_value)
+        # for f in range(0, self.max_fps+1):
+        #         for x in range(0, 3):
+        #             for g in range(0, self.num_agents):
+        #                 for h in range(0, self.max_fps + 1):
+        #                     if(next_q_value[f][x][g][h] > best_next_value):
+        #                         best_next_value = next_q_value[f][x][g][h]
                                 
         self.table[*state_idx, f, x, g, h] = ((1 - self.alpha) * q_value) + (self.alpha * (reward + (self.gamma * best_next_value)))
 

@@ -8,6 +8,8 @@ def test_policy(env, num_episodes):
     final_rewards = []
     
     agents = []
+    fs = [[] for i in range(0, env._num_agents)]
+    hs = [[] for i in range(0, env._num_agents)]
     
     for agent in env.possible_agents:
         agents.append(TabularAgent(agent, 
@@ -21,16 +23,16 @@ def test_policy(env, num_episodes):
                                    proc_rate,
                                    arrival_rate,
                                    env._num_agents,
-                                   battery_bins=11,
-                                   time_bins=11,
+                                   battery_bins=16,
+                                   time_bins=16,
                                    alpha=0.1,
                                    gamma=0.99,
                                    eps_min=0.05,
-                                   eps_dec=0.97,
+                                   eps_dec=0.998,
+                                #    eps_dec=0.98,
                                    eps_init=1.0,
                                    episodes=num_episodes
                                    ))
-    
     
     rewards_for_plot = [[] for i in range(0, env._num_agents)]
     
@@ -48,7 +50,7 @@ def test_policy(env, num_episodes):
             
             actions = {
                 # agent: [0, 0, 0, 0]
-                agent_id: agents[agent_id].choice_action(observations)
+                agent_id: agents[agent_id].choice_action(observations[agent_id])
                 for agent_id in env.agents
             }
             
@@ -66,7 +68,7 @@ def test_policy(env, num_episodes):
 
             # update agents at each iteration
             for id in range(0, env._num_agents):
-                agents[id].update_table(observations, new_observations, actions[id], rewards[id])
+                agents[id].update_table(observations[id], new_observations[id], actions[id], rewards[id])
             
             observations = new_observations    
                 
@@ -75,37 +77,87 @@ def test_policy(env, num_episodes):
         total_reward = sum(episode_rewards.values())
         final_rewards.append(total_reward)
         
+        framerates_to_print = []
+        
         for agent in range(0, env._num_agents):
             rewards_for_plot[agent].append(episode_rewards[agent])
+            fs[agent].append(env.fs[agent] / step)
+            hs[agent].append(env.hs[agent] / step)
+            
+            framerates_to_print.append([round(float(fs[agent][-1]), 3), round(float(hs[agent][-1]), 3)])
+            
+            env.fs[agent] = 0
+            env.hs[agent] = 0
         
         for agent in agents:
             agent.update_epsilon()
-                
-        print(f"Episode: {episode+1}/{num_episodes} - rewards: {episode_rewards} - total: {total_reward}")
+                    
+        print(f"Episode: {episode+1}/{num_episodes} - rewards: {episode_rewards} - framerates: {framerates_to_print}")
 
     plot_rewards(rewards_for_plot)
+    plot_local_framerate(fs)
+    plot_offloading_framerate(hs)
 
 def plot_rewards(rewards):
     
     # print(rewards)
     
-    window = 2
-    plt.suptitle("Q-Learning tabular - rewards")
+    window = 10
+    plt.suptitle("Multi-agent : rewards")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
     plt.xlabel("Episodes")
     plt.ylabel("Rewards")
     
     for i in range(0, env._num_agents):
-        print(rewards[i])
+        # print(rewards[i])
         plt.plot(range(window - 1, len(rewards[i])), np.convolve(rewards[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
         plt.plot(rewards[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
     
-    plt.grid()
-    plt.legend()
+    plt.grid()    
+    plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+    plt.tight_layout()
     plt.savefig(f"rewards_plot.pdf")
     plt.close()
-
+    
+def plot_local_framerate(fs):
+    window = 10
+    plt.suptitle("Multi-agent : local average framerate")
+    plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Rewards")
+    
+    for i in range(0, env._num_agents):
+        # print(rewards[i])
+        plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
+        plt.plot(fs[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
+    
+    plt.grid()
+    plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+    plt.tight_layout()
+    plt.savefig(f"local_framerate_plot.pdf")
+    plt.close()
+    
+def plot_offloading_framerate(fs):
+    window = 10
+    plt.suptitle("Multi-agent : offloading average framerate")
+    plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Rewards")
+    
+    for i in range(0, env._num_agents):
+        # print(rewards[i])
+        plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
+        plt.plot(fs[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
+    
+    plt.grid()
+    plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+    plt.tight_layout()
+    plt.savefig(f"offloading_framerate_plot.pdf")
+    plt.close()
+    
 if __name__ == "__main__":
     
     # env params
@@ -116,7 +168,7 @@ if __name__ == "__main__":
     arrival_rate = 15
     
     num_agents = 2
-    num_episodes = 3
+    num_episodes = 2000
     
     power_idle = 2.4
     power_max = 6.0
@@ -126,8 +178,9 @@ if __name__ == "__main__":
     
     # irradiance datafiles
     irradiance_datapaths = [
-        '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv',
+        '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
         '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
+        # '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
     ]
     
     # env constructor
