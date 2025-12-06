@@ -23,8 +23,8 @@ def test_policy(env, num_episodes):
                                    proc_rate,
                                    arrival_rate,
                                    env._num_agents,
-                                   battery_bins=16,
-                                   time_bins=16,
+                                   battery_bins=10,
+                                   time_bins=10,
                                    alpha=0.1,
                                    gamma=0.99,
                                    eps_min=0.05,
@@ -173,14 +173,19 @@ if __name__ == "__main__":
     power_idle = 2.4
     power_max = 6.0
     
-    batteries = [25, 100]
-    panel_surfaces = [1.0, 0.5]
+    batteries = [25, 100, 50]
+    panel_surfaces = [1.0, 0.5, 0.75]
     
     # irradiance datafiles
+    # irradiance_datapaths = [
+    #     '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
+    #     '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
+    #     '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
+    # ]
+    
     irradiance_datapaths = [
         '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
-        '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
-        # '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
+        '../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
     ]
     
     # env constructor
