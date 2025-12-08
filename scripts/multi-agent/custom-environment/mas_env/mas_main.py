@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 from custom_environment import CustomEnvironment
@@ -8,6 +9,7 @@ def test_policy(env, num_episodes):
     final_rewards = []
     
     agents = []
+    framerates  =[[] for i in range(0, env._num_agents)]
     fs = [[] for i in range(0, env._num_agents)]
     hs = [[] for i in range(0, env._num_agents)]
     
@@ -23,23 +25,35 @@ def test_policy(env, num_episodes):
                                    proc_rate,
                                    arrival_rate,
                                    env._num_agents,
-                                   battery_bins=10,
-                                   time_bins=10,
+                                   battery_bins=15,
+                                   time_bins=15,
                                    alpha=0.1,
                                    gamma=0.99,
                                    eps_min=0.05,
                                    eps_dec=0.998,
-                                #    eps_dec=0.98,
+                                #    eps_dec=0.95,
                                    eps_init=1.0,
                                    episodes=num_episodes
                                    ))
     
     rewards_for_plot = [[] for i in range(0, env._num_agents)]
+    rewards_daily = [[[] for j in range(0, math.ceil(num_episodes / 400))] for i in range(0, env._num_agents)]
+
+    battery_levels = [[] for i in range(0, env._num_agents)]
+    battery_daily = [[[] for j in range(0, math.ceil(num_episodes / 400))] for i in range(0, env._num_agents)]
+    
+    backlogs_average = [[] for i in range(0, env._num_agents)]
+    backlogs_daily = [[[] for j in range(0, math.ceil(num_episodes / 400))] for i in range(0, env._num_agents)]
+
     
     for episode in range(0, num_episodes):
+        framerates_temp = [0 for i in range(0, env._num_agents)]
         observations, _ = env.reset()
         episode_rewards = {agent: 0 for agent in env.possible_agents}
         step = 0
+        
+        batteries = [0.0 for i in range(0, env._num_agents)]
+        backlogs = [0.0 for i in range(0, env._num_agents)]
         
         while env.agents:
             # print(f"\n === Step: {step} ===")
@@ -65,11 +79,22 @@ def test_policy(env, num_episodes):
             
             for agent in rewards:
                 episode_rewards[agent] += rewards[agent]
-
+                # print(f"agent: {agent} - battery: {batteries[agent]} - obs: {new_observations[agent][0]}")
+                batteries[agent] += new_observations[agent][0]
+                backlogs[agent] += env.backlogs[agent]
+                
+                if(episode % 400 == 0):
+                    battery_daily[agent][int(episode / 400)].append(new_observations[agent][0])
+                    rewards_daily[agent][int(episode / 400)].append(rewards[agent])
+                    backlogs_daily[agent][int(episode / 400)].append(env.backlogs[agent])
+                
             # update agents at each iteration
             for id in range(0, env._num_agents):
                 agents[id].update_table(observations[id], new_observations[id], actions[id], rewards[id])
-            
+                # print(f"agent: {id} - {actions[id][0]} , {actions[id][3]}")
+                # input()
+                framerates_temp[id] += (actions[id][0] + actions[id][3])
+
             observations = new_observations    
                 
             step += 1
@@ -83,12 +108,20 @@ def test_policy(env, num_episodes):
             rewards_for_plot[agent].append(episode_rewards[agent])
             fs[agent].append(env.fs[agent] / step)
             hs[agent].append(env.hs[agent] / step)
+
+            battery_levels[agent].append((batteries[agent] / step) * env.battery_capacities[agent])
+            # print(f"agent: {agent} - battery_level: {batteries[agent]} - battery: {battery_levels[agent]}")
+            batteries[agent] = []
             
+            backlogs_average[agent].append(backlogs[agent] / step)
+            backlogs[agent] = []
+                        
             framerates_to_print.append([round(float(fs[agent][-1]), 3), round(float(hs[agent][-1]), 3)])
+            framerates[agent].append(framerates_temp[agent] / step)
             
             env.fs[agent] = 0
             env.hs[agent] = 0
-        
+
         for agent in agents:
             agent.update_epsilon()
                     
@@ -97,6 +130,14 @@ def test_policy(env, num_episodes):
     plot_rewards(rewards_for_plot)
     plot_local_framerate(fs)
     plot_offloading_framerate(hs)
+    plot_framerate(framerates)
+    plot_battery_levels(battery_levels)
+    plot_backlogs(backlogs_average)
+    
+    plot_reward_daily(rewards_daily)
+    plot_battery_daily(battery_daily)
+    plot_backlog_daily(backlogs_daily)
+    
 
 def plot_rewards(rewards):
     
@@ -139,6 +180,44 @@ def plot_local_framerate(fs):
     plt.savefig(f"local_framerate_plot.pdf")
     plt.close()
     
+def plot_framerate(fs):
+    window = 10
+    plt.suptitle("Multi-agent : average framerate")
+    plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Framerate")
+    
+    for i in range(0, env._num_agents):
+        # print(rewards[i])
+        plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
+        plt.plot(fs[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
+    
+    plt.grid()
+    plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+    plt.tight_layout()
+    plt.savefig(f"framerate_plot.pdf")
+    plt.close()
+    
+def plot_battery_levels(levels):
+    window = 10
+    plt.suptitle("Multi-agent : battery levels")
+    plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("battery")
+    
+    for i in range(0, env._num_agents):
+        # print(rewards[i])
+        plt.plot(range(window - 1, len(levels[i])), np.convolve(levels[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
+        plt.plot(levels[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
+    
+    plt.grid()
+    plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+    plt.tight_layout()
+    plt.savefig(f"avg_battery_plot.pdf")
+    plt.close()
+    
 def plot_offloading_framerate(fs):
     window = 10
     plt.suptitle("Multi-agent : offloading average framerate")
@@ -158,6 +237,88 @@ def plot_offloading_framerate(fs):
     plt.savefig(f"offloading_framerate_plot.pdf")
     plt.close()
     
+def plot_backlogs(backlogs):
+    window = 10
+    plt.suptitle("Multi-agent : average backlog")
+    plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Rewards")
+    
+    for i in range(0, env._num_agents):
+        # print(rewards[i])
+        plt.plot(range(window - 1, len(backlogs[i])), np.convolve(backlogs[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
+        plt.plot(backlogs[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
+    
+    plt.grid()
+    plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+    plt.tight_layout()
+    plt.savefig(f"backlog_plot.pdf")
+    plt.close()
+    
+def plot_reward_daily(data):
+    
+    for elem in range(0, env._num_agents):
+        
+        window = 40
+        plt.suptitle("Multi-agent : daily reward")
+        plt.title(f"B: {env.battery_capacities[elem] / 3600} - P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+        
+        plt.xlabel("Episodes")
+        plt.ylabel("Rewards")
+        for i in range(0, len(data[elem])):
+            # print(rewards[i])
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i* 100}-th episode", alpha = 1.0)
+        
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+        plt.tight_layout()
+        plt.savefig(f"rewards_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.close()
+
+def plot_battery_daily(data):
+    
+    print(len(data))
+    
+    for elem in range(0, env._num_agents):
+                
+        window = 40
+        plt.suptitle("Multi-agent : daily battery")
+        plt.title(f"B: {env.battery_capacities[elem] / 3600} - P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+        
+        plt.xlabel("Episodes")
+        plt.ylabel("Battery")
+        for i in range(0, len(data[elem])):
+            # print(rewards[i])
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 100}-th episode", alpha = 1.0)
+        
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+        plt.tight_layout()
+        plt.savefig(f"battery_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.close()
+
+def plot_backlog_daily(data):
+    
+    for elem in range(0, env._num_agents):
+        
+        window = 40
+        plt.suptitle("Multi-agent : daily backlog")
+        plt.title(f"B: {env.battery_capacities[elem] / 3600} - P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+        
+        plt.xlabel("Episodes")
+        plt.ylabel("Backlog")
+        for i in range(0, len(data[elem])):
+            # print(rewards[i])
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i* 100}-th episode", alpha = 1.0)
+        
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+        plt.tight_layout()
+        plt.savefig(f"backlog_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.close()
+
+    
 if __name__ == "__main__":
     
     # env params
@@ -168,13 +329,16 @@ if __name__ == "__main__":
     arrival_rate = 15
     
     num_agents = 2
-    num_episodes = 2000
+    num_episodes = 4000
     
     power_idle = 2.4
     power_max = 6.0
     
-    batteries = [25, 100, 50]
-    panel_surfaces = [1.0, 0.5, 0.75]
+    batteries = [25, 100]
+    panel_surfaces = [1.0, 0.5]
+    
+    # batteries = [25, 100, 50]
+    # panel_surfaces = [1.0, 0.5, 0.75]
     
     # irradiance datafiles
     # irradiance_datapaths = [

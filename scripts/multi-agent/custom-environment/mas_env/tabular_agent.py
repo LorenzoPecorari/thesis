@@ -52,6 +52,7 @@ class TabularAgent:
         
         for i in range(self.num_agents):
             state_dims.append(battery_bins)
+            state_dims.append(4)
             state_dims.append(time_bins)
 
         total_dims = tuple(state_dims + action_dims)
@@ -67,9 +68,11 @@ class TabularAgent:
         for agent in range(0, self.num_agents):
             # print(state[2*agent], state[2*agent+1])
             battery_idx = int(min(state[2*agent] * self.battery_bins, self.battery_bins - 1))
-            time_idx = int(min(state[2*agent + 1] * self.time_bins, self.time_bins - 1))            
+            backlog_idx = int(state[2*agent + 1])
+            time_idx = int(min(state[2*agent + 2] * self.time_bins, self.time_bins - 1))            
             
             indeces.append(battery_idx)
+            indeces.append(backlog_idx)
             indeces.append(time_idx)
 
         # print(indeces)
