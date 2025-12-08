@@ -130,10 +130,12 @@ class CustomEnvironment(ParallelEnv):
             consumption = ((fti * ef_loc * self._proc_interval) + (hti * (ef_loc + e_tx_rx) * self._proc_interval))
             reward = min(1, (((fti + hti) * ef_loc * self._proc_interval) + ((hti * (ef_loc + e_tx_rx) * self._proc_interval)))/(eb_t + pv))
         
+        return reward
+        
         # TODO: test the new assumption for battery going to zero 
-        if(((eb_t + pv) - consumption) < 0):
-            return -1
-        return 0
+        # if(((eb_t + pv) - consumption) < 0):
+        #     return -1
+        # return 0
         
         
         # if(xti == 0 and ((fti * ef_loc * self._proc_interval) < (eb_t + pv))):
