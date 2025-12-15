@@ -65,9 +65,10 @@ class CustomEnvironment(ParallelEnv):
         except:
             self.max_steps = 1
 
-        # observation_space: [b_1, t_1, b_2, t_2, ..., b_n, t_n]
-        # for each agent there are two variables in the range [0.0, 1.0] where
+        # observation_space: [b_1, s_i, t_1, b_2, s_2, t_2, ..., b_n, s_n, t_n]
+        # for each agent there are three variables in the range [0.0, 1.0] where
             # b_i -> "battery level"
+            # s_i -> "storage level"
             # t_i -> "episode completion"
         self._action_spaces = {
             agent: spaces.MultiDiscrete([self._processing_rate + 1, 3, self._num_agents, self._processing_rate + 1]) for agent in self.possible_agents
@@ -79,7 +80,13 @@ class CustomEnvironment(ParallelEnv):
             # g_i -> "target node"
             # h_i -> "offloading framerate"
         self._observation_spaces = {
-            agent: spaces.Box(low = 0.0, high = 1.0, shape = (self._num_agents * 3, ), dtype = np.float32) for agent in self.possible_agents
+            agent: spaces.Box(
+                low=np.array([0.0, 0.0, 0.0] * self._num_agents, dtype=np.float32),
+                high=np.array([1.0, 3.0, 1.0] * self._num_agents, dtype=np.float32),
+                dtype=np.float32
+            ) 
+            for agent in self.possible_agents
+        
         }
         
         self.fs = [0 for i in range(0, self._num_agents)]
@@ -93,7 +100,10 @@ class CustomEnvironment(ParallelEnv):
     # function for retrieving level of backlog
     def calculate_backlog_level(self, agent_id):
         qty = self.backlogs[agent_id]
-        max_storage = self._processing_rate * self._proc_interval
+        # max_storage = self._processing_rate * self._proc_interval
+        
+        # DA TESTARE VERSIONE CON CAPACITÀ PARI A 10 INTERVALLI
+        max_storage = self._processing_rate * self._proc_interval * 10
         # max_storage = self._processing_rate * self._proc_interval * (3600 / self._proc_interval)
         
         # return 1 - qty/max_storage
@@ -200,7 +210,7 @@ class CustomEnvironment(ParallelEnv):
         if(consumption > available_energy):
             return 0
 
-        return (consumption/available_energy)**2
+        return (consumption/(available_energy))
 
         # return consumption/available_energy
                 
@@ -305,7 +315,7 @@ class CustomEnvironment(ParallelEnv):
         #     return ((fti + hti) * self._proc_interval) / self.backlogs[agent_id]
 
         if(qty < max_storage):
-            return 1 - (qty / max_storage)
+            return (1 - (qty / max_storage))
         
         return 0
         
@@ -429,10 +439,13 @@ class CustomEnvironment(ParallelEnv):
             # if computational energy is higher than the available one, drop to zero otherwise update battery level directly on state structure
             if(comp_energy > available_energy):
                 # find remaining energy excluding the idle needed
-                usable_energy = max(0, available_energy - self.e_idle)
+                # !!! usable_energy = max(0, available_energy - self.e_idle)
+                usable_energy = available_energy
                 
                 # computing the processable frames and the processed ones
                 frames_processable = int(usable_energy / self.e_frame)
+                # frames_processable = int(usable_energy / self.e_frame)
+                
                 frames_processed = min(frames_processable, self.backlogs[agent_id])
                 
                 self.battery_energies[agent_id] = 0.0
@@ -506,5 +519,3 @@ class CustomEnvironment(ParallelEnv):
     
     def observe(self, agent):
         return np.array(self.observations[agent])
-     
-    

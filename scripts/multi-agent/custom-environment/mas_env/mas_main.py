@@ -30,30 +30,33 @@ def test_policy(env, num_episodes):
                                    alpha=0.1,
                                    gamma=0.99,
                                    eps_min=0.05,
-                                #    eps_dec=0.9,
-                                   eps_dec=0.997,
+                                #    eps_dec=0.95,
+                                   eps_dec=0.9985,
                                    eps_init=1.0,
                                    episodes=num_episodes
                                    ))
     
     rewards_for_plot = [[] for i in range(0, env._num_agents)]
-    rewards_daily = [[[] for j in range(0, math.ceil(num_episodes / 400))] for i in range(0, env._num_agents)]
+    rewards_daily = [[[] for j in range(0, math.ceil(num_episodes / 500))] for i in range(0, env._num_agents)]
 
     battery_levels = [[] for i in range(0, env._num_agents)]
-    battery_daily = [[[] for j in range(0, math.ceil(num_episodes / 400))] for i in range(0, env._num_agents)]
+    battery_daily = [[[] for j in range(0, math.ceil(num_episodes / 500))] for i in range(0, env._num_agents)]
     
     backlogs_average = [[] for i in range(0, env._num_agents)]
-    backlogs_daily = [[[] for j in range(0, math.ceil(num_episodes / 400))] for i in range(0, env._num_agents)]
+    backlogs_daily = [[[] for j in range(0, math.ceil(num_episodes / 500))] for i in range(0, env._num_agents)]
 
     reward_batteries = [[] for i in range(0, env._num_agents)]
     reward_frames = [[] for i in range(0, env._num_agents)]
     reward_cooperation = [[] for i in range(0, env._num_agents)]
     reward_backlog = [[] for i in range(0, env._num_agents)]
-        
+    
+    sent = [[] for i in range(0, env._num_agents)]
+    received = [[] for i in range(0, env._num_agents)]    
+    
     for episode in range(0, num_episodes):
         framerates_temp = [0 for i in range(0, env._num_agents)]
-        send_hi = [[0, 0] for i in range(0, env._num_agents)]
-        recv_hi = [[0, 0] for i in range(0, env._num_agents)]
+        send_hi = [[] for i in range(0, env._num_agents)]
+        recv_hi = [[] for i in range(0, env._num_agents)]
     
         observations, _ = env.reset()
         episode_rewards = {agent: 0 for agent in env.possible_agents}
@@ -85,23 +88,28 @@ def test_policy(env, num_episodes):
             # print(f"Observations: {observations}\nNew Observations: {new_observations}")
             
             for agent in rewards:
-                if(actions[agent][1] == 1):
-                    send_hi[agent][0] += actions[agent][3]
-                    send_hi[agent][1] += 1
-                    
-                elif(actions[agent][1] == 2):
-                    recv_hi[agent][0] += actions[agent][3]
-                    recv_hi[agent][1] += 1
 
                 episode_rewards[agent] += rewards[agent]
                 # print(f"agent: {agent} - battery: {batteries[agent]} - obs: {new_observations[agent][0]}")
                 batteries[agent] += new_observations[agent][0]
                 backlogs[agent] += env.backlogs[agent]
                 
-                if(episode % 400 == 0):
-                    battery_daily[agent][int(episode / 400)].append(new_observations[agent][0])
-                    rewards_daily[agent][int(episode / 400)].append(rewards[agent])
-                    backlogs_daily[agent][int(episode / 400)].append(env.backlogs[agent])
+                if(episode % 500 == 0):
+                    battery_daily[agent][int(episode / 500)].append(new_observations[agent][0])
+                    rewards_daily[agent][int(episode / 500)].append(rewards[agent])
+                    backlogs_daily[agent][int(episode / 500)].append(env.backlogs[agent])
+                        
+                    if(actions[agent][1] == 0):
+                        send_hi[agent].append(0)
+                        recv_hi[agent].append(0)  
+                        
+                    elif(actions[agent][1] == 1):
+                        send_hi[agent].append(actions[agent][3])
+                        recv_hi[agent].append(0)  
+                        
+                    elif(actions[agent][1] == 2):
+                        send_hi[agent].append(0)
+                        recv_hi[agent].append(actions[agent][3])
                 
             # update agents at each iteration
             for id in range(0, env._num_agents):
@@ -113,7 +121,7 @@ def test_policy(env, num_episodes):
             observations = new_observations    
                 
             step += 1
-        
+
         total_reward = sum(episode_rewards.values())
         final_rewards.append(total_reward)
         
@@ -148,17 +156,17 @@ def test_policy(env, num_episodes):
             env.r_cooperation[agent] = 0
             env.r_backlog[agent] = 0
             
-            send_hi[agent] = 0
-            recv_hi[agent] = 0
+            if(len(send_hi[agent]) > 0 and len(recv_hi[agent])):
+                sent[agent].append(send_hi[agent])
+                received[agent].append(recv_hi[agent])
             
-
-        for agent in agents:
-            agent.update_epsilon()
-
-        
+            send_hi[agent] = []
+            recv_hi[agent] = []
+            
+            agents[agent].update_epsilon()
         
         print(f"Episode: {episode+1}/{num_episodes} - rewards: {episode_rewards} - framerates: {framerates_to_print}")
-
+        
     plot_rewards(rewards_for_plot)
     plot_local_framerate(fs)
     plot_offloading_framerate(hs)
@@ -175,12 +183,15 @@ def test_policy(env, num_episodes):
     plot_rewards_cooperation(reward_cooperation)
     plot_rewards_frames(reward_frames)
     
+    plot_recvd_daily(received)
+    plot_sent_daily(sent)
+    
 
 def plot_rewards(rewards):
     
     # print(rewards)
     
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : rewards")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -192,14 +203,14 @@ def plot_rewards(rewards):
         plt.plot(range(window - 1, len(rewards[i])), np.convolve(rewards[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
         plt.plot(rewards[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
     
-    plt.grid()    
+    plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
     plt.savefig(f"rewards_plot.pdf")
     plt.close()
     
 def plot_local_framerate(fs):
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : local average framerate")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -218,7 +229,7 @@ def plot_local_framerate(fs):
     plt.close()
     
 def plot_framerate(fs):
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : average framerate")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -237,7 +248,7 @@ def plot_framerate(fs):
     plt.close()
     
 def plot_battery_levels(levels):
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : battery levels")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -256,7 +267,7 @@ def plot_battery_levels(levels):
     plt.close()
     
 def plot_offloading_framerate(fs):
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : offloading average framerate")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -275,7 +286,7 @@ def plot_offloading_framerate(fs):
     plt.close()
     
 def plot_backlogs(backlogs):
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : average backlog")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -305,7 +316,7 @@ def plot_reward_daily(data):
         plt.ylabel("Rewards")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
-            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 400}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 500}-th episode", alpha = 1.0)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
@@ -327,7 +338,7 @@ def plot_battery_daily(data):
         plt.ylabel("Battery")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
-            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 400}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 500}-th episode", alpha = 1.0)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
@@ -347,7 +358,7 @@ def plot_backlog_daily(data):
         plt.ylabel("Backlog")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
-            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i* 400}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i* 500}-th episode", alpha = 1.0)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
@@ -359,7 +370,7 @@ def plot_rewards_batteries(rewards):
     
     # print(rewards)
     
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : rewards")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -381,7 +392,7 @@ def plot_rewards_frames(rewards):
     
     # print(rewards)
     
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : rewards frames")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -403,7 +414,7 @@ def plot_rewards_cooperation(rewards):
     
     # print(rewards)
     
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : rewards cooperation")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -425,7 +436,7 @@ def plot_rewards_backlog(rewards):
     
     # print(rewards)
     
-    window = 10
+    window = 15
     plt.suptitle("Multi-agent : rewards backlog")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
     
@@ -442,6 +453,47 @@ def plot_rewards_backlog(rewards):
     plt.tight_layout()
     plt.savefig(f"rewards_backlog_plot.pdf")
     plt.close()
+
+
+def plot_sent_daily(data):
+    
+    for elem in range(0, env._num_agents):
+        
+        window = 40
+        plt.suptitle("Multi-agent : daily sent frames")
+        plt.title(f"B: {env.battery_capacities[elem] / 3600} - P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+        
+        plt.xlabel("Timestep")
+        plt.ylabel("Framerate")
+        for i in range(0, len(data[elem])):
+            # print(rewards[i])
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 500}-th episode", alpha = 1.0)
+        
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+        plt.tight_layout()
+        plt.savefig(f"rewards_sent_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.close()
+
+def plot_recvd_daily(data):
+    
+    for elem in range(0, env._num_agents):
+        
+        window = 40
+        plt.suptitle("Multi-agent : daily received frames")
+        plt.title(f"B: {env.battery_capacities[elem] / 3600} - P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}")
+        
+        plt.xlabel("Timestep")
+        plt.ylabel("Framerate")
+        for i in range(0, len(data[elem])):
+            # print(rewards[i])
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 500}-th episode", alpha = 1.0)
+        
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
+        plt.tight_layout()
+        plt.savefig(f"rewards_recvd_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.close()
 
 
 if __name__ == "__main__":
