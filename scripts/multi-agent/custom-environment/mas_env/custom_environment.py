@@ -210,9 +210,9 @@ class CustomEnvironment(ParallelEnv):
         if(consumption > available_energy):
             return 0
 
-        return (consumption/(available_energy))
+        # return (consumption/(available_energy))
 
-        # return consumption/available_energy
+        return consumption/available_energy
                 
         # return 1 - (consumption/available_energy)
 

@@ -136,4 +136,5 @@ class TabularAgent:
         self.table[*state_idx, f, x, g, h] = ((1 - self.alpha) * q_value) + (self.alpha * (reward + (self.gamma * best_next_value)))
 
     def update_epsilon(self):
-        self.eps *= self.eps_dec
+        if(self.eps > self.eps_min):
+            self.eps *= self.eps_dec
