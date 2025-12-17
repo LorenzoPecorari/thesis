@@ -346,6 +346,7 @@ class CustomEnvironment(ParallelEnv):
         ht_gti = self.actions[gti][3]
         
         if((fti + hti) > self._processing_rate):
+                return 0
                 fti = self._processing_rate
                 hti = 0
                 
@@ -513,23 +514,29 @@ class CustomEnvironment(ParallelEnv):
             gt_gti = self.actions[gti][2]
             ht_gti = self.actions[gti][3]
 
+            idx = (self.episode * self.max_steps) + self.timestep
+            # print(idx)
+            self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
+            panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
+            
             if((fti + hti) > self._processing_rate):
-                fti = self._processing_rate
-                hti = 0
+                self.fs[agent_id] += fti
+                self.hs[agent_id] += hti
+                
+                self.battery_energies[agent_id] -= (self.e_idle - panel_energy) 
+                self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
+                self.states[agent_id][1] = self.calculate_backlog_level(agent_id)
+                self.states[agent_id][2] = round(self.timestep / self.max_steps, 4)
+                
+                continue
                 
             if((ft_gti + ht_gti) > self._processing_rate):
-                ft_gti = self._processing_rate
                 ht_gti = 0
 
             self.fs[agent_id] += fti
             self.hs[agent_id] += hti
             
-            idx = (self.episode * self.max_steps) + self.timestep
-            # print(idx)
-            self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
-            
             # --- NEW REWARD FUNCTION ---
-            panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
             actual_battery = self.battery_energies[agent_id] + panel_energy
             needed_energy = (fti * self._proc_interval * self.e_frame) + self.e_idle
             backlog = self.backlogs[agent_id]

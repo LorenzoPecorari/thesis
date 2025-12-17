@@ -30,21 +30,21 @@ def test_policy(env, num_episodes):
                                    alpha=0.1,
                                    gamma=0.99,
                                    eps_min=0.05,
-                                   eps_dec=0.997,
+                                #    eps_dec=0.997,
                                 #    eps_dec=0.95,
-                                #    eps_dec=0.9985,
+                                   eps_dec=0.9985,
                                    eps_init=1.0,
                                    episodes=num_episodes
                                    ))
     
     rewards_for_plot = [[] for i in range(0, env._num_agents)]
-    rewards_daily = [[[] for j in range(0, math.ceil(num_episodes / 500))] for i in range(0, env._num_agents)]
+    rewards_daily = [[[] for j in range(0, math.ceil(num_episodes / int((num_episodes - 1) / 10)))] for i in range(0, env._num_agents)]
 
     battery_levels = [[] for i in range(0, env._num_agents)]
-    battery_daily = [[[] for j in range(0, math.ceil(num_episodes / 500))] for i in range(0, env._num_agents)]
+    battery_daily = [[[] for j in range(0, math.ceil(num_episodes / int((num_episodes - 1) / 10)))] for i in range(0, env._num_agents)]
     
     backlogs_average = [[] for i in range(0, env._num_agents)]
-    backlogs_daily = [[[] for j in range(0, math.ceil(num_episodes / 500))] for i in range(0, env._num_agents)]
+    backlogs_daily = [[[] for j in range(0, math.ceil(num_episodes / int((num_episodes - 1) / 10)))] for i in range(0, env._num_agents)]
 
     # reward_batteries = [[] for i in range(0, env._num_agents)]
     # reward_frames = [[] for i in range(0, env._num_agents)]
@@ -95,10 +95,10 @@ def test_policy(env, num_episodes):
                 batteries[agent] += new_observations[agent][0]
                 backlogs[agent] += env.backlogs[agent]
                 
-                if(episode % 500 == 0):
-                    battery_daily[agent][int(episode / 500)].append(new_observations[agent][0])
-                    rewards_daily[agent][int(episode / 500)].append(rewards[agent])
-                    backlogs_daily[agent][int(episode / 500)].append(env.backlogs[agent])
+                if(episode % int((num_episodes - 1) / 10) == 0):
+                    battery_daily[agent][int(episode / int((num_episodes - 1) / 10))].append(env.battery_energies[agent])
+                    rewards_daily[agent][int(episode / int((num_episodes - 1) / 10))].append(rewards[agent])
+                    backlogs_daily[agent][int(episode / int((num_episodes - 1) / 10))].append(env.backlogs[agent])
                         
                     if(actions[agent][1] == 0):
                         send_hi[agent].append(0)
@@ -207,7 +207,7 @@ def plot_rewards(rewards):
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"rewards_plot.pdf")
+    plt.savefig(f"rewards_plot_{num_episodes-1}.pdf")
     plt.close()
     
 def plot_local_framerate(fs):
@@ -226,7 +226,7 @@ def plot_local_framerate(fs):
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"local_framerate_plot.pdf")
+    plt.savefig(f"local_framerate_plot_{num_episodes-1}.pdf")
     plt.close()
     
 def plot_framerate(fs):
@@ -245,7 +245,7 @@ def plot_framerate(fs):
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"framerate_plot.pdf")
+    plt.savefig(f"framerate_plot_{num_episodes-1}.pdf")
     plt.close()
     
 def plot_battery_levels(levels):
@@ -264,7 +264,7 @@ def plot_battery_levels(levels):
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"avg_battery_plot.pdf")
+    plt.savefig(f"avg_battery_plot_{num_episodes-1}.pdf")
     plt.close()
     
 def plot_offloading_framerate(fs):
@@ -283,7 +283,7 @@ def plot_offloading_framerate(fs):
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"offloading_framerate_plot.pdf")
+    plt.savefig(f"offloading_framerate_plot_{num_episodes-1}.pdf")
     plt.close()
     
 def plot_backlogs(backlogs):
@@ -302,7 +302,7 @@ def plot_backlogs(backlogs):
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"backlog_plot.pdf")
+    plt.savefig(f"backlog_plot_{num_episodes-1}.pdf")
     plt.close()
     
 def plot_reward_daily(data):
@@ -317,12 +317,12 @@ def plot_reward_daily(data):
         plt.ylabel("Rewards")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
-            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 500}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * (int((num_episodes-1) / 10))}-th episode", alpha = 1.0)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         plt.tight_layout()
-        plt.savefig(f"rewards_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.savefig(f"rewards_{int(env.battery_capacities[elem] / 3600)}Wh_{num_episodes-1}.pdf")
         plt.close()
 
 def plot_battery_daily(data):
@@ -339,12 +339,12 @@ def plot_battery_daily(data):
         plt.ylabel("Battery")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
-            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 500}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * (int((num_episodes-1) / 10))}-th episode", alpha = 1.0)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         plt.tight_layout()
-        plt.savefig(f"battery_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.savefig(f"battery_{int(env.battery_capacities[elem] / 3600)}Wh_{num_episodes-1}.pdf")
         plt.close()
 
 def plot_backlog_daily(data):
@@ -359,12 +359,12 @@ def plot_backlog_daily(data):
         plt.ylabel("Backlog")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
-            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i* 500}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i* (int((num_episodes-1) / 10))}-th episode", alpha = 1.0)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         plt.tight_layout()
-        plt.savefig(f"backlog_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.savefig(f"backlog_{int(env.battery_capacities[elem] / 3600)}Wh_{num_episodes-1}.pdf")
         plt.close()
         
 def plot_rewards_batteries(rewards):
@@ -386,7 +386,7 @@ def plot_rewards_batteries(rewards):
     plt.grid()    
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"rewards_batteries_plot.pdf")
+    plt.savefig(f"rewards_batteries_plot_{num_episodes-1}.pdf")
     plt.close()
 
 def plot_rewards_frames(rewards):
@@ -408,7 +408,7 @@ def plot_rewards_frames(rewards):
     plt.grid()    
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"rewards_frames_plot.pdf")
+    plt.savefig(f"rewards_frames_plot_{num_episodes-1}.pdf")
     plt.close()
 
 def plot_rewards_cooperation(rewards):
@@ -430,7 +430,7 @@ def plot_rewards_cooperation(rewards):
     plt.grid()    
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"rewards_cooperation_plot.pdf")
+    plt.savefig(f"rewards_cooperation_plot_{num_episodes-1}.pdf")
     plt.close()
 
 def plot_rewards_backlog(rewards):
@@ -452,7 +452,7 @@ def plot_rewards_backlog(rewards):
     plt.grid()    
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"rewards_backlog_plot.pdf")
+    plt.savefig(f"rewards_backlog_plot_{num_episodes-1}.pdf")
     plt.close()
 
 
@@ -468,12 +468,12 @@ def plot_sent_daily(data):
         plt.ylabel("Framerate")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
-            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 500}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * (int((num_episodes-1) / 10))}-th episode", alpha = 1.0)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         plt.tight_layout()
-        plt.savefig(f"rewards_sent_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.savefig(f"rewards_sent_{int(env.battery_capacities[elem] / 3600)}Wh_{num_episodes-1}.pdf")
         plt.close()
 
 def plot_recvd_daily(data):
@@ -488,12 +488,12 @@ def plot_recvd_daily(data):
         plt.ylabel("Framerate")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
-            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * 500}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * (int((num_episodes-1) / 10))}-th episode", alpha = 1.0)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         plt.tight_layout()
-        plt.savefig(f"rewards_recvd_{int(env.battery_capacities[elem] / 3600)}Wh.pdf")
+        plt.savefig(f"rewards_recvd_{int(env.battery_capacities[elem] / 3600)}Wh_{num_episodes-1}.pdf")
         plt.close()
 
 
@@ -507,7 +507,7 @@ if __name__ == "__main__":
     arrival_rate = 15
     
     num_agents = 2
-    num_episodes = 2001
+    num_episodes = 6001
     
     power_idle = 2.4
     power_max = 6.0
