@@ -46,10 +46,10 @@ def test_policy(env, num_episodes):
     backlogs_average = [[] for i in range(0, env._num_agents)]
     backlogs_daily = [[[] for j in range(0, math.ceil(num_episodes / 500))] for i in range(0, env._num_agents)]
 
-    # reward_batteries = [[] for i in range(0, env._num_agents)]
-    # reward_frames = [[] for i in range(0, env._num_agents)]
-    # reward_cooperation = [[] for i in range(0, env._num_agents)]
-    # reward_backlog = [[] for i in range(0, env._num_agents)]
+    reward_batteries = [[] for i in range(0, env._num_agents)]
+    reward_frames = [[] for i in range(0, env._num_agents)]
+    reward_cooperation = [[] for i in range(0, env._num_agents)]
+    reward_backlog = [[] for i in range(0, env._num_agents)]
     
     sent = [[] for i in range(0, env._num_agents)]
     received = [[] for i in range(0, env._num_agents)]    
@@ -147,15 +147,15 @@ def test_policy(env, num_episodes):
             env.fs[agent] = 0
             env.hs[agent] = 0
             
-            # reward_batteries[agent].append(env.r_battery[agent])
-            # reward_frames[agent].append(env.r_frames[agent])
-            # reward_cooperation[agent].append(env.r_cooperation[agent])
-            # reward_backlog[agent].append(env.r_backlog[agent])
+            reward_batteries[agent].append(env.r_battery[agent])
+            reward_frames[agent].append(env.r_frames[agent])
+            reward_cooperation[agent].append(env.r_cooperation[agent])
+            reward_backlog[agent].append(env.r_backlog[agent])
             
-            # env.r_battery[agent] = 0
-            # env.r_frames[agent] = 0
-            # env.r_cooperation[agent] = 0
-            # env.r_backlog[agent] = 0
+            env.r_battery[agent] = 0
+            env.r_frames[agent] = 0
+            env.r_cooperation[agent] = 0
+            env.r_backlog[agent] = 0
             
             if(len(send_hi[agent]) > 0 and len(recv_hi[agent])):
                 sent[agent].append(send_hi[agent])
@@ -179,10 +179,10 @@ def test_policy(env, num_episodes):
     plot_battery_daily(battery_daily)
     plot_backlog_daily(backlogs_daily)
     
-    # plot_rewards_batteries(reward_batteries)
-    # plot_rewards_backlog(reward_backlog)
-    # plot_rewards_cooperation(reward_cooperation)
-    # plot_rewards_frames(reward_frames)
+    plot_rewards_batteries(reward_batteries)
+    plot_rewards_backlog(reward_backlog)
+    plot_rewards_cooperation(reward_cooperation)
+    plot_rewards_frames(reward_frames)
     
     plot_recvd_daily(received)
     plot_sent_daily(sent)

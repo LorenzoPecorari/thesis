@@ -92,10 +92,10 @@ class CustomEnvironment(ParallelEnv):
         self.fs = [0 for i in range(0, self._num_agents)]
         self.hs = [0 for i in range(0, self._num_agents)]
         
-        # self.r_battery = [0 for i in range(0, self._num_agents)]
-        # self.r_frames = [0 for i in range(0, self._num_agents)]
-        # self.r_cooperation = [0 for i in range(0, self._num_agents)]
-        # self.r_backlog = [0 for i in range(0, self._num_agents)]
+        self.r_battery = [0 for i in range(0, self._num_agents)]
+        self.r_frames = [0 for i in range(0, self._num_agents)]
+        self.r_cooperation = [0 for i in range(0, self._num_agents)]
+        self.r_backlog = [0 for i in range(0, self._num_agents)]
     
     # function for retrieving level of backlog
     def calculate_backlog_level(self, agent_id):
@@ -345,136 +345,37 @@ class CustomEnvironment(ParallelEnv):
         gt_gti = self.actions[gti][2]
         ht_gti = self.actions[gti][3]
         
-        if((fti + hti) > self._processing_rate):
-                fti = self._processing_rate
-                hti = 0
-                
-        if((ft_gti + ht_gti) > self._processing_rate):
-            ft_gti = self._processing_rate
-            ht_gti = 0
-        
         idx = (self.episode * self.max_steps) + self.timestep
         # print(idx)
         self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
         
-        # --- NEW REWARD FUNCTION ---
-        panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
-        actual_battery = self.battery_energies[agent_id] + panel_energy
-        needed_energy = (fti * self._proc_interval * self.e_frame) + self.e_idle
-        backlog = self.backlogs[agent_id]
+        reward_frames = self.calculate_reward_frames(agent_id, fti, xti, gti, hti, xt_gti, gt_gti, ht_gti)
+        reward_battery = self.calculate_reward_battery(
+                            agent_id,
+                            fti,
+                            xti,
+                            gti,
+                            hti,
+                            ft_gti,
+                            xt_gti,
+                            gt_gti,
+                            ht_gti,
+                            self.battery_energies[agent_id],
+                            self.e_frame,
+                            self.e_tx_rx,
+                            self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
+                            )
         
-        processable = min(backlog, int((actual_battery - self.e_idle) / self.e_frame))
+        reward_backlog = self.calculate_reward_backlog(agent_id, self.states[agent_id][1], fti, hti)
+        reward_cooperation = self.calculate_reward_cooperation(agent_id, xti, gti, hti, xt_gti, gt_gti, ht_gti)
         
-        if(actual_battery < needed_energy):
-            backlog -= processable
-            actual_battery = 0.0
-            return 0
-        
-        processed = min(processable, fti * self._proc_interval)
-        local_reward = 0
-        
-        actual_battery -= needed_energy
-        
-        # state update
-        # self.update_state(agent_id, panel_energy, needed_energy, processed)
-        
-        if(processable > 0):
-            local_reward = (processed / processable) * (actual_battery / self.battery_capacities[agent_id])
-            backlog -= processed
-                        
-        else:
-            local_reward = 0
-                    
-        # return local_reward
-        # end local computation
-        
-        # ---------------------------------------------------
-        
-        # begin of offloading computation
-        
-        if(xti == 0 or (fti + hti) > self._processing_rate):
-            return local_reward
-        
-        remaining_framerate = self._processing_rate - fti
-        if(remaining_framerate <= 0):
-            return 0
-        
-        offloading_reward = 0
-        
-        if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
-            ht = min(hti, ht_gti)
-            needed_energy = ht * self._proc_interval * self.e_tx_rx
-            processable = min(backlog, int(actual_battery / self.e_frame))
-            processed = min(processable, ht * self._proc_interval)
-            
-            if(actual_battery > needed_energy):
-                if(processable > 0):
-                    offloading_reward = round(float(processed/processable) * (self.battery_energies[agent_id] / self.battery_capacities[agent_id]), 2)
-                else:
-                    offloading_reward = 0
-                    
-        elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
-            ht = min(hti, ht_gti)
-            needed_energy = ht * self._proc_interval * (self.e_tx_rx + self.e_frame)
-            processable = min(backlog, int(actual_battery / self.e_frame))
-            processed = min(processable, ht * self._proc_interval)
-            
-            if(actual_battery > needed_energy):
-                if(processable > 0):
-                    offloading_reward = round(float(processed/processable) * (actual_battery / self.battery_capacities[agent_id]), 2)
-                else:
-                    offloading_reward = 0
-                   
-        return local_reward + offloading_reward
+        self.r_battery[agent_id] += reward_battery
+        self.r_frames[agent_id] += reward_frames
+        self.r_cooperation[agent_id] += reward_cooperation
+        self.r_backlog[agent_id] += reward_backlog
 
-        # --- OLD REWARD FUNCTION ---
-        
-        # reward_frames = self.calculate_reward_frames(agent_id, fti, xti, gti, hti, xt_gti, gt_gti, ht_gti)
-        # reward_battery = self.calculate_reward_battery(
-                            # agent_id,
-                            # fti,
-                            # xti,
-                            # gti,
-                            # hti,
-                            # ft_gti,
-                            # xt_gti,
-                            # gt_gti,
-                            # ht_gti,
-                            # self.battery_energies[agent_id],
-                            # self.e_frame,
-                            # self.e_tx_rx,
-                            # self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
-                            # )
-        
-        # reward_backlog = self.calculate_reward_backlog(agent_id, self.states[agent_id][1], fti, hti)
-        # reward_cooperation = self.calculate_reward_cooperation(agent_id, xti, gti, hti, xt_gti, gt_gti, ht_gti)
-        
-        # self.r_battery[agent_id] += reward_battery
-        # self.r_frames[agent_id] += reward_frames
-        # self.r_cooperation[agent_id] += reward_cooperation
-        # self.r_backlog[agent_id] += reward_backlog
-
-        # return reward_battery + reward_frames + reward_backlog + reward_cooperation        
+        return reward_battery + reward_frames + reward_backlog + reward_cooperation        
         # return reward_frames * reward_battery * reward_backlog * reward_cooperation
-        
-    def update_state(self, agent_id, panel_energy, needed_energy, processed):
-        '''
-        state: [0 -> battery, 1-> backlog, 2-> timestep]
-        '''
-        
-        # battery update
-        self.battery_energies[agent_id] += (panel_energy - needed_energy)
-        if(self.battery_energies[agent_id] < 0.0):
-            self.battery_energies[agent_id] = 0.0
-        
-        # backlog upate
-        self.backlogs[agent_id] -= processed
-        if(self.backlogs[agent_id] < 0):
-            self.backlogs[agent_id] = 0
-        
-        self.states[agent_id][0] = round(float(self.battery_energies[agent_id] / self.battery_capacities[agent_id]), 2)
-        self.states[agent_id][1] = self.calculate_backlog_level(agent_id)
-        self.states[agent_id][2] = round(float(self.timestep / self.max_steps), 4)
         
     def reset(self, seed=None, options=None):
         self.agents = copy(self.possible_agents)
@@ -508,158 +409,72 @@ class CustomEnvironment(ParallelEnv):
             gti = self.actions[agent_id][2]
             hti = self.actions[agent_id][3]
             
-            ft_gti = self.actions[gti][0]
             xt_gti = self.actions[gti][1]
             gt_gti = self.actions[gti][2]
             ht_gti = self.actions[gti][3]
 
-            if((fti + hti) > self._processing_rate):
-                fti = self._processing_rate
-                hti = 0
-                
-            if((ft_gti + ht_gti) > self._processing_rate):
-                ft_gti = self._processing_rate
-                ht_gti = 0
-
             self.fs[agent_id] += fti
             self.hs[agent_id] += hti
+
+            frames_arrived = self._arrival_rate * self._proc_interval
+            self.backlogs[agent_id] += frames_arrived
             
-            idx = (self.episode * self.max_steps) + self.timestep
-            # print(idx)
-            self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
+            idx = self.episode * self.max_steps + self.timestep
+            self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 5)
+            panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_efficiency * self.panel_surfaces[agent_id] * self._proc_interval        
             
-            # --- NEW REWARD FUNCTION ---
-            panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
-            actual_battery = self.battery_energies[agent_id] + panel_energy
-            needed_energy = (fti * self._proc_interval * self.e_frame) + self.e_idle
-            backlog = self.backlogs[agent_id]
+            # energy of local computation
+            comp_energy = fti * self._proc_interval * self.e_frame + self.e_idle
+                      
+            # if it accepts the load of another node, compute the auxiliary effort
+            if(xti == 2 and xt_gti == 1 and gti != 0 and gti != agent_id and gt_gti == agent_id):
+                offload_frames = min(ht_gti, hti) * self._proc_interval
+                comp_energy += (offload_frames * self.e_frame + offload_frames * self.e_tx_rx)
+            # if it needs to send the load to another node, add energy needed for data exchange
+            elif(xti == 1 and xt_gti == 2 and gti != 0 and gti != agent_id and gt_gti == agent_id):
+                comp_energy += min(ht_gti, hti) * self.e_tx_rx
             
-            processable = min(backlog, int((actual_battery - self.e_idle) / self.e_frame))
+            available_energy = self.battery_energies[agent_id] + panel_energy
             
-            if(actual_battery < needed_energy):
-                self.backlogs[agent_id] -= processable
+            # if computational energy is higher than the available one, drop to zero otherwise update battery level directly on state structure
+            if(comp_energy > available_energy):
+                # find remaining energy excluding the idle needed
+                # !!! usable_energy = max(0, available_energy - self.e_idle)
+                usable_energy = available_energy
+                
+                # computing the processable frames and the processed ones
+                frames_processable = int(usable_energy / self.e_frame)
+                # frames_processable = int(usable_energy / self.e_frame)
+                
+                frames_processed = min(frames_processable, self.backlogs[agent_id])
+                
                 self.battery_energies[agent_id] = 0.0
-            
+                self.states[agent_id][0] = 0.0
+                self.backlogs[agent_id] -= frames_processed
+  
             else:
-                processed = min(processable, fti * self._proc_interval)
+                self.battery_energies[agent_id] = available_energy - comp_energy
+                self.battery_energies[agent_id] = min(self.battery_energies[agent_id], self.battery_capacities[agent_id])
                 
-                if(processable > 0):
-                    self.backlogs[agent_id] -= processed
+                self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
+                # self.backlogs[agent_id] -= fti * self._proc_interval
                 
-                if(xti == 0 or (fti + hti) > self._processing_rate):
-                    self.battery_energies[agent_id] += panel_energy - needed_energy
-                else:
-                    remaining_framerate = self._processing_rate - fti
-                    # if(remaining_framerate < 0):
-                    #     continue
-                    
-                    if(remaining_framerate > 0):
-                        actual_battery -= needed_energy
-                        
-                        if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
-                            ht = min(hti, ht_gti)
-                            needed_energy = ht * self._proc_interval * self.e_tx_rx
-                            processable = min(backlog, int(actual_battery / self.e_frame))
-                            processed = min(processable, ht * self._proc_interval)
-                            
-                            if(actual_battery > needed_energy):
-                                if(processable > 0):
-                                    self.backlogs[agent_id] -= processed
-                                    actual_battery -= ht * self.e_tx_rx
-                                    
-                            self.battery_energies[agent_id] = actual_battery
-                            
-                        elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
-                            ht = min(hti, ht_gti)
-                            needed_energy = ht * self._proc_interval * (self.e_tx_rx + self.e_frame)
-                            processable = min(backlog, int(actual_battery / self.e_frame))
-                            processed = min(processable, ht * self._proc_interval)
-                            
-                            if(actual_battery > needed_energy):
-                                if(processable > 0):
-                                    self.backlogs[agent_id] -= processed
-                                    actual_battery -= ht * (self.e_tx_rx + self.e_frame)
+                frames_to_process = fti * self._proc_interval
+                frames_processed = min(frames_to_process, self.backlogs[agent_id])
+                self.backlogs[agent_id] -= frames_processed
 
-                            self.battery_energies[agent_id] = actual_battery
-
-                        else:
-                            self.battery_energies[agent_id] = actual_battery
-
-                    else:
-                        self.battery_energies[agent_id] = actual_battery
-
-
-            self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
+            self.backlogs[agent_id] = max(0, self.backlogs[agent_id])                
+            
             self.states[agent_id][1] = self.calculate_backlog_level(agent_id)
-            self.states[agent_id][2] = round(self.timestep / self.max_steps, 4)
-
-
-
-        # return
-        # # frames_arrived = self._arrival_rate * self._proc_interval
-        # # self.backlogs[agent_id] += frames_arrived
-        
-        # idx = self.episode * self.max_steps + self.timestep
-        # self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 5)
-        # panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_efficiency * self.panel_surfaces[agent_id] * self._proc_interval        
-        
-        # # energy of local computation
-        # comp_energy = fti * self._proc_interval * self.e_frame + self.e_idle
-                    
-        # # if it accepts the load of another node, compute the auxiliary effort
-        # if(xti == 2 and xt_gti == 1 and gti != 0 and gti != agent_id and gt_gti == agent_id):
-        #     offload_frames = min(ht_gti, hti) * self._proc_interval
-        #     comp_energy += (offload_frames * self.e_frame + offload_frames * self.e_tx_rx)
-        # # if it needs to send the load to another node, add energy needed for data exchange
-        # elif(xti == 1 and xt_gti == 2 and gti != 0 and gti != agent_id and gt_gti == agent_id):
-        #     comp_energy += min(ht_gti, hti) * self.e_tx_rx
-        
-        # available_energy = self.battery_energies[agent_id] + panel_energy
-        
-        # # if computational energy is higher than the available one, drop to zero otherwise update battery level directly on state structure
-        # if(comp_energy > available_energy):
-        #     # find remaining energy excluding the idle needed
-        #     # !!! usable_energy = max(0, available_energy - self.e_idle)
-        #     usable_energy = available_energy
+            self.states[agent_id][2] = round(self.timestep / self.max_steps, 4) 
             
-        #     # computing the processable frames and the processed ones
-        #     frames_processable = int(usable_energy / self.e_frame)
-        #     # frames_processable = int(usable_energy / self.e_frame)
-            
-        #     frames_processed = min(frames_processable, self.backlogs[agent_id])
-            
-        #     self.battery_energies[agent_id] = 0.0
-        #     self.states[agent_id][0] = 0.0
-        #     self.backlogs[agent_id] -= frames_processed
-
-        # else:
-        #     self.battery_energies[agent_id] = available_energy - comp_energy
-        #     self.battery_energies[agent_id] = min(self.battery_energies[agent_id], self.battery_capacities[agent_id])
-            
-        #     self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
-        #     # self.backlogs[agent_id] -= fti * self._proc_interval
-            
-        #     frames_to_process = fti * self._proc_interval
-        #     frames_processed = min(frames_to_process, self.backlogs[agent_id])
-        #     self.backlogs[agent_id] -= frames_processed
-
-        # self.backlogs[agent_id] = max(0, self.backlogs[agent_id])                
-        
-        # self.states[agent_id][1] = self.calculate_backlog_level(agent_id)
-        # self.states[agent_id][2] = round(self.timestep / self.max_steps, 4) 
-        
-        # # print(f"agent: {agent_id} -> battery: [{self.battery_energies[agent_id]} - {self.states[agent_id][0]}], panel_power: {self.panel_efficiency * self.panel_surfaces[agent_id] * self.irradiance_level[agent_id] * self.max_irrad}, irradiance: {self.irradiance_level[agent_id] * self.max_irrad}")
+            # print(f"agent: {agent_id} -> battery: [{self.battery_energies[agent_id]} - {self.states[agent_id][0]}], panel_power: {self.panel_efficiency * self.panel_surfaces[agent_id] * self.irradiance_level[agent_id] * self.max_irrad}, irradiance: {self.irradiance_level[agent_id] * self.max_irrad}")
 
     def step(self, actions):
         # manual copy of actions inside internal actions variable
         for i in range(0, self._num_agents):
             for j in range(0, len(actions[i])):
                 self.actions[i][j] = actions[i][j]
-
-        # updating backlogs with arriving frames for each agent
-        for agent_id in range(0, self._num_agents):
-            frames_arrived = self._arrival_rate * self._proc_interval
-            self.backlogs[agent_id] += frames_arrived
 
         # for each agent is returned the reward according the reward function defined a priori        
         rewards = {a: self.calculate_reward(a) for a in self.agents}

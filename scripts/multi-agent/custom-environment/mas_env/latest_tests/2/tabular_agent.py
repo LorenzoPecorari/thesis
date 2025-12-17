@@ -64,20 +64,16 @@ class TabularAgent:
         indeces = []
         
         # print(f"state: {state}")
-        # print("state [discretization]:", state)
         
         for agent in range(0, self.num_agents):
-            # print(state[2*agent], state[3*agent+1], state[2*agent+2])
-            battery_idx = int(min(state[3*agent] * self.battery_bins, self.battery_bins - 1))
-            backlog_idx = min(int(state[3*agent + 1]), 3)
-            time_idx = int(min(state[3*agent + 2] * self.time_bins, self.time_bins - 1))            
+            # print(state[2*agent], state[2*agent+1])
+            battery_idx = int(min(state[2*agent] * self.battery_bins, self.battery_bins - 1))
+            backlog_idx = int(state[2*agent + 1])
+            time_idx = int(min(state[2*agent + 2] * self.time_bins, self.time_bins - 1))            
             
             indeces.append(battery_idx)
             indeces.append(backlog_idx)
             indeces.append(time_idx)
-            # print(f"agent {agent} -> battery: {battery_idx}, backlog: {backlog_idx}, time_idx: {time_idx}")
-
-            # input()
 
         # print(indeces)
 
