@@ -30,9 +30,10 @@ def test_policy(env, num_episodes):
                                    alpha=0.1,
                                    gamma=0.99,
                                    eps_min=0.05,
-                                #    eps_dec=0.997,
-                                #    eps_dec=0.95,
                                    eps_dec=0.9985,
+                                #    eps_dec=0.997,
+                                #    eps_dec=0.99,
+                                #    eps_dec=0.999,
                                    eps_init=1.0,
                                    episodes=num_episodes
                                    ))
@@ -82,7 +83,6 @@ def test_policy(env, num_episodes):
             # print(f"chosen actions: {actions}")
             
             # print(f"actions: {actions}")
-            # print(f"actions: {actions}")
 
             new_observations, rewards, terminations, truncations, infos = env.step(actions)
             # print(f"Observations: {observations}\nRewards: {rewards}\nTerminations:{terminations}\nTruncations: {truncations}\nInfos: {infos}\n")
@@ -96,7 +96,7 @@ def test_policy(env, num_episodes):
                 backlogs[agent] += env.backlogs[agent]
                 
                 if(episode % int((num_episodes - 1) / 10) == 0):
-                    battery_daily[agent][int(episode / int((num_episodes - 1) / 10))].append(env.battery_energies[agent])
+                    battery_daily[agent][int(episode / int((num_episodes - 1) / 10))].append(env.battery_energies[agent] / env.battery_capacities[agent])
                     rewards_daily[agent][int(episode / int((num_episodes - 1) / 10))].append(rewards[agent])
                     backlogs_daily[agent][int(episode / int((num_episodes - 1) / 10))].append(env.backlogs[agent])
                         
@@ -117,7 +117,11 @@ def test_policy(env, num_episodes):
                 agents[id].update_table(observations[id], new_observations[id], actions[id], rewards[id])
                 # print(f"agent: {id} - {actions[id][0]} , {actions[id][3]}")
                 # input()
-                framerates_temp[id] += (actions[id][0] + actions[id][3])
+                if((actions[id][0] + actions[id][3]) > proc_rate):
+                    framerates_temp[id] += (actions[id][0])
+                else:
+                    framerates_temp[id] += (actions[id][0] + actions[id][3])
+                    
 
             observations = new_observations    
                 
@@ -507,7 +511,7 @@ if __name__ == "__main__":
     arrival_rate = 15
     
     num_agents = 2
-    num_episodes = 6001
+    num_episodes = 4001
     
     power_idle = 2.4
     power_max = 6.0

@@ -45,8 +45,8 @@ class CustomEnvironment(ParallelEnv):
         self.panel_surfaces = panel_surfaces
         
         self.e_idle = power_idle * self._proc_interval
-        self.e_frame = (0.8 * (power_max - power_idle) * self._proc_interval) / proc_rate
-        self.e_tx_rx = (0.2 * (power_max - power_idle) * self._proc_interval) / proc_rate
+        self.e_frame = (0.8 * (power_max - power_idle) * 1) / proc_rate
+        self.e_tx_rx = (0.2 * (power_max - power_idle) * 1) / proc_rate
         
         self.backlogs = [0 for i in range(0, self._num_agents)]
         
@@ -301,6 +301,8 @@ class CustomEnvironment(ParallelEnv):
         qty = self.backlogs[agent_id]
         max_storage = self._processing_rate * self._proc_interval * 10
 
+        # max_storage = self._processing_rate * self._proc_interval * (3600 * 2 / self._proc_interval)
+
 
         # max_storage = self._processing_rate * 3600 * 12
         
@@ -346,12 +348,15 @@ class CustomEnvironment(ParallelEnv):
         ht_gti = self.actions[gti][3]
         
         if((fti + hti) > self._processing_rate):
-                return 0
-                fti = self._processing_rate
-                hti = 0
+            hti = 0
+            
+            # return 0
+            # return self._processing_rate - (fti + hti)
+            # fti = self._processing_rate
+            # hti = 0
                 
         if((ft_gti + ht_gti) > self._processing_rate):
-            ft_gti = self._processing_rate
+            # ft_gti = self._processing_rate
             ht_gti = 0
         
         idx = (self.episode * self.max_steps) + self.timestep
@@ -359,74 +364,86 @@ class CustomEnvironment(ParallelEnv):
         self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
         
         # --- NEW REWARD FUNCTION ---
-        panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
+        panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval * self.panel_efficiency
         actual_battery = self.battery_energies[agent_id] + panel_energy
         needed_energy = (fti * self._proc_interval * self.e_frame) + self.e_idle
         backlog = self.backlogs[agent_id]
         
-        processable = min(backlog, int((actual_battery - self.e_idle) / self.e_frame))
+        processable = min(backlog, int((actual_battery - self.e_idle) / self.e_frame), self._processing_rate * self._proc_interval)
         
-        if(actual_battery < needed_energy):
-            backlog -= processable
-            actual_battery = 0.0
+        if(actual_battery <= needed_energy):
+            # backlog -= processable
+            # actual_battery = 0.0
             return 0
         
         processed = min(processable, fti * self._proc_interval)
         local_reward = 0
         
-        actual_battery -= needed_energy
+        actual_battery = max(actual_battery - needed_energy, 0)
         
         # state update
         # self.update_state(agent_id, panel_energy, needed_energy, processed)
         
         if(processable > 0):
-            local_reward = (processed / processable) * (actual_battery / self.battery_capacities[agent_id])
-            backlog -= processed
-                        
-        else:
-            local_reward = 0
-                    
+            # if(backlog > 0):
+            local_reward = (processed / processable) * (actual_battery / self.battery_capacities[agent_id]) * (processed / backlog)
+            backlog = max(backlog - processed, 0)
+        
+        # else:
+        #     print(f"agent {agent_id} -> processed/processable: {processed} / {processable}")
         # return local_reward
+        
+        # print(f"agent {agent_id} LOCAL -> processed/processable: {processed} / {processable}")
+        
         # end local computation
         
         # ---------------------------------------------------
         
         # begin of offloading computation
         
-        if(xti == 0 or (fti + hti) > self._processing_rate):
+        if(xti == 0):
             return local_reward
         
         remaining_framerate = self._processing_rate - fti
-        if(remaining_framerate <= 0):
-            return 0
+        if(remaining_framerate < 0):
+            return local_reward
         
         offloading_reward = 0
         
         if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
             ht = min(hti, ht_gti)
             needed_energy = ht * self._proc_interval * self.e_tx_rx
-            processable = min(backlog, int(actual_battery / self.e_frame))
+            # processable = min(backlog, int(actual_battery / self.e_frame))
+            processable = min(backlog, int(actual_battery / self.e_tx_rx), remaining_framerate * self._proc_interval)
             processed = min(processable, ht * self._proc_interval)
             
             if(actual_battery > needed_energy):
                 if(processable > 0):
-                    offloading_reward = round(float(processed/processable) * (self.battery_energies[agent_id] / self.battery_capacities[agent_id]), 2)
+                    offloading_reward = float(processed/processable) * (actual_battery / self.battery_capacities[agent_id]) * (processed / backlog)
                 else:
                     offloading_reward = 0
+            else:
+                offloading_reward = 0
                     
         elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
             ht = min(hti, ht_gti)
             needed_energy = ht * self._proc_interval * (self.e_tx_rx + self.e_frame)
-            processable = min(backlog, int(actual_battery / self.e_frame))
+            # processable = min(backlog, int(actual_battery / self.e_frame))
+            processable = min(backlog, int(actual_battery / (self.e_frame + self.e_tx_rx)))
             processed = min(processable, ht * self._proc_interval)
             
             if(actual_battery > needed_energy):
                 if(processable > 0):
-                    offloading_reward = round(float(processed/processable) * (actual_battery / self.battery_capacities[agent_id]), 2)
+                    offloading_reward = float(processed/processable) * (actual_battery / self.battery_capacities[agent_id]) * (processed / backlog)
                 else:
                     offloading_reward = 0
-                   
-        return local_reward + offloading_reward
+            else:
+                offloading_reward = 0
+        
+        # print(f"agent {agent_id} OFF {xti} -> processed/processable: {processed} / {processable}")
+        # input()
+        
+        return (local_reward + offloading_reward)
 
         # --- OLD REWARD FUNCTION ---
         
@@ -516,84 +533,96 @@ class CustomEnvironment(ParallelEnv):
 
             idx = (self.episode * self.max_steps) + self.timestep
             # print(idx)
-            self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
-            panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval
+            self.irradiance_level[agent_id] = self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad
+            panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval * self.panel_efficiency
+            
+            # print(f"\nagent {agent_id} BEFORE -> fti: {fti} - hti: {hti}")
             
             if((fti + hti) > self._processing_rate):
-                self.fs[agent_id] += fti
-                self.hs[agent_id] += hti
+                hti = 0
+                # self.fs[agent_id] += 0
+                # self.hs[agent_id] += 0
                 
-                self.battery_energies[agent_id] -= (self.e_idle - panel_energy) 
-                self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
-                self.states[agent_id][1] = self.calculate_backlog_level(agent_id)
-                self.states[agent_id][2] = round(self.timestep / self.max_steps, 4)
+                # self.battery_energies[agent_id] = min(max((self.battery_energies[agent_id] - self.e_idle + panel_energy), 0) , self.battery_capacities[agent_id])
+                # self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
+                # self.states[agent_id][1] = self.calculate_backlog_level(agent_id)
+                # self.states[agent_id][2] = round(self.timestep / self.max_steps, 4)
                 
-                continue
+                # continue
                 
             if((ft_gti + ht_gti) > self._processing_rate):
                 ht_gti = 0
+
+            # input(f"agent {agent_id} AFTER -> fti: {fti} - hti: {hti}")
 
             self.fs[agent_id] += fti
             self.hs[agent_id] += hti
             
             # --- NEW REWARD FUNCTION ---
-            actual_battery = self.battery_energies[agent_id] + panel_energy
+            actual_battery = min(self.battery_energies[agent_id] + panel_energy, self.battery_capacities[agent_id])
             needed_energy = (fti * self._proc_interval * self.e_frame) + self.e_idle
             backlog = self.backlogs[agent_id]
             
             processable = min(backlog, int((actual_battery - self.e_idle) / self.e_frame))
             
+            if(actual_battery > self.battery_capacities[agent_id]):
+                print(f"battery overflow: {actual_battery} / {self.battery_capacities[agent_id]}")
+                
+            # input(f"agent {agent_id} -> battery: {self.battery_energies[agent_id]} / {self.battery_capacities[agent_id]}")
+            
             if(actual_battery < needed_energy):
-                self.backlogs[agent_id] -= processable
+                self.backlogs[agent_id] = max(self.backlogs[agent_id] - processable, 0)
                 self.battery_energies[agent_id] = 0.0
             
             else:
                 processed = min(processable, fti * self._proc_interval)
                 
                 if(processable > 0):
-                    self.backlogs[agent_id] -= processed
+                    self.backlogs[agent_id] = max(self.backlogs[agent_id] - processed, 0)
+                    self.battery_energies[agent_id] = min(max(actual_battery - needed_energy, 0), self.battery_capacities[agent_id])
                 
                 if(xti == 0 or (fti + hti) > self._processing_rate):
-                    self.battery_energies[agent_id] += panel_energy - needed_energy
+                    self.battery_energies[agent_id] = min(max(actual_battery - needed_energy, 0), self.battery_capacities[agent_id])
                 else:
                     remaining_framerate = self._processing_rate - fti
                     # if(remaining_framerate < 0):
                     #     continue
                     
                     if(remaining_framerate > 0):
-                        actual_battery -= needed_energy
+                        actual_battery = max(actual_battery - needed_energy, 0)
                         
                         if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
                             ht = min(hti, ht_gti)
                             needed_energy = ht * self._proc_interval * self.e_tx_rx
-                            processable = min(backlog, int(actual_battery / self.e_frame))
+                            processable = min(backlog, int(actual_battery / self.e_tx_rx), remaining_framerate * self._proc_interval)
                             processed = min(processable, ht * self._proc_interval)
                             
                             if(actual_battery > needed_energy):
                                 if(processable > 0):
                                     self.backlogs[agent_id] -= processed
-                                    actual_battery -= ht * self.e_tx_rx
+                                    actual_battery = max(actual_battery - needed_energy, 0)
+                                    # actual_battery -= ht * self.e_tx_rx
                                     
                             self.battery_energies[agent_id] = actual_battery
                             
                         elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
                             ht = min(hti, ht_gti)
                             needed_energy = ht * self._proc_interval * (self.e_tx_rx + self.e_frame)
-                            processable = min(backlog, int(actual_battery / self.e_frame))
+                            processable = min(backlog, int(actual_battery / (self.e_tx_rx + self.e_frame)), remaining_framerate * self._proc_interval)
                             processed = min(processable, ht * self._proc_interval)
                             
                             if(actual_battery > needed_energy):
                                 if(processable > 0):
-                                    self.backlogs[agent_id] -= processed
-                                    actual_battery -= ht * (self.e_tx_rx + self.e_frame)
+                                    # self.backlogs[agent_id] -= processed
+                                    actual_battery = max(actual_battery - needed_energy, 0)
 
                             self.battery_energies[agent_id] = actual_battery
 
                         else:
-                            self.battery_energies[agent_id] = actual_battery
+                            self.battery_energies[agent_id] = min(actual_battery, self.battery_capacities[agent_id])
 
                     else:
-                        self.battery_energies[agent_id] = actual_battery
+                        self.battery_energies[agent_id] = min(actual_battery, self.battery_capacities[agent_id])
 
 
             self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
