@@ -28,12 +28,12 @@ max_irradiation = 1000
 battery_bins = 10
 time_bins = 10
 alpha = 0.05
-gamma = 0.9
+gamma = 0.1
 eps_min = 0.05
-eps_dec = 0.97
+eps_dec = 0.997
 eps_init = 1.0
 
-episodes = 365
+episodes = 2001
 # episodes = 365*3
 
 

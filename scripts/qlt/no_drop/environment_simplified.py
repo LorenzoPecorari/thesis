@@ -80,7 +80,7 @@ class EnergyPVEnv(gymnasium.Env):
         # energy params
         self.p_idle = power_idle
         self.e_idle = power_idle * proc_interval                    # [Ws = J over defined interval]
-        self.e_frame = (((power_max - power_idle) - (0.2*(power_max - power_idle))) / fps)                           # [Ws = J] per singolo frame in un secondo, da rivedere
+        self.e_frame = (((power_max - power_idle)) / fps)                           # [Ws = J] per singolo frame in un secondo, da rivedere
         # self.e_frame = ((power_max - power_idle) / 30)
         
         self.energy_consumption = 0.0
@@ -143,7 +143,7 @@ class EnergyPVEnv(gymnasium.Env):
             super().reset()
             self.day = seed % 365
         
-        self.battery_level = 0.8
+        self.battery_level = 0.5
         self.storage = 0
         
         self.inner_step = 0

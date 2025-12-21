@@ -178,7 +178,7 @@ class Agent:
                 # input("Press enter to continue...")
             
             
-            if(episode % 50 == 0):
+            if(episode % int(self.episodes / 10) == 0):
                 cumulative_traces.append(trace)
                 battery_traces.append(battery_trace)
                 action_traces.append(action_trace)
@@ -236,7 +236,7 @@ class Agent:
         plt.ylabel("Reward")
         
         for i in range(len(data)):
-            plt.plot(data[i], label = f"{str(i * 50)}-th episode")
+            plt.plot(data[i], label = f"{str(i * int(self.episodes/10))}-th episode")
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -254,7 +254,7 @@ class Agent:
         # plt.ylim(-0.5, 10)
         
         for i in range(len(data)):
-            plt.plot(data[i], label = f"{str(i * 50)}-th episode" )
+            plt.plot(data[i], label = f"{str(i * int(self.episodes/10))}-th episode" )
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -271,7 +271,7 @@ class Agent:
         plt.ylabel("FPS")
         
         for i in range(len(data)):
-            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * 50)}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * int(self.episodes/10))}-th episode", alpha = 1.0)
 
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
@@ -304,7 +304,7 @@ class Agent:
         n = len(data)
         
         for i in range(n):
-            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window) / window, mode='valid'), label = f"{i * 50}-th episode", alpha = 1.0)
+            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window) / window, mode='valid'), label = f"{i * int(self.episodes/10)}-th episode", alpha = 1.0)
         
         plt.grid()
         # plt.legend()
@@ -463,7 +463,7 @@ class Agent:
         plt.ylabel("storage")
         
         for i in range(len(storage_traces)):
-            plt.plot(storage_traces[i], label = f"{str(i * 50)}-th ep." )
+            plt.plot(storage_traces[i], label = f"{str(i * (self.episodes/10))}-th ep." )
         
         plt.grid()
         plt.legend()
