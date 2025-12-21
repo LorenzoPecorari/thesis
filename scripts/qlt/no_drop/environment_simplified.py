@@ -228,17 +228,18 @@ class EnergyPVEnv(gymnasium.Env):
         processed = min(processable, action * self.interval, self.storage)
         
         self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
-        self.storage -= processed
-        self.total_frames_processed += processed
         
         if(actual > needed and self.battery_level > 0.0):
             try:
-                return (processed / processable) * 100 * self.battery_level
+                reward = (processed / processable) * self.battery_level * (processed / self.storage)
+                self.storage -= processed
+                self.total_frames_processed += processed
+                return processed
                 # return processed / processable
             except:
                 return 0
         else:
-            return -100
+            return 0
             # return -100
 
         # if(processable > 0):
