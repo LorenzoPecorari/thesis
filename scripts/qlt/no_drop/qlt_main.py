@@ -8,7 +8,7 @@ import numpy as np
 # datapath = '../../../dataset/merged_2023-2024.csv'
 datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
 # datapath = '../../../dataset/csv_42.51676443693097_12.526882609673224_fixed_23_180_PT15M.csv'
-battery_capacity = 100            # [Wh]
+battery_capacity = 25            # [Wh]
 storage_capacity = 54000
 power_idle = 2.6                       # [W]
 power_max = 6.0                    # [W]
@@ -16,7 +16,7 @@ delta_time = 15 * 60                    # [sec]
 proc_interval = (1) * 60                 # [sec]                     
 pv_efficiency = 0.2
 # pv_area = 10 / (1200 * pv_efficiency)
-pv_area = (0.5)
+pv_area = (1.0)
 fps = 20
 
 # seed = "fixed_winter"
@@ -25,10 +25,10 @@ seed = "fixed_summer"
 
 max_irradiation = 1000
 
-battery_bins = 10
-time_bins = 10
-alpha = 0.05
-gamma = 0.1
+battery_bins = 15
+time_bins = 15
+alpha = 0.1
+gamma = 0.9
 eps_min = 0.05
 eps_dec = 0.997
 eps_init = 1.0
@@ -40,22 +40,22 @@ episodes = 2001
 def multiple_train(num_agents):
     window = 10
     # plt.subplots(figsize=(8, 6))
-    plt.suptitle("Q-Learning tabular - rewards comparison")
-    print("title: Q-Learning tabular - rewards comparison")
-    plt.title(f"p_I = {power_idle}W, p_F = {power_max}W")        
-    # plt.title(f"fps = {fps}, p_I = {power_idle}W, p_F = {power_max}W, battery = {battery_capacity}Wh")    
     # plt.title(f"fps = {fps}, p_I = {power_idle}, p_F = {power_max}, storage = {storage_capacity}")
     # plt.ylim(1000, 1500)
+    # plt.title(f"fps = {fps}, p_I = {power_idle}W, p_F = {power_max}W, battery = {battery_capacity}Wh")    
 
-    plt.xlabel("Episodes")
-    plt.ylabel("Rewards")
+    # plt.suptitle("Q-Learning tabular - rewards comparison")
+    # print("title: Q-Learning tabular - rewards comparison")
+    # plt.title(f"p_I = {power_idle}W, p_F = {power_max}W")        
+    # plt.xlabel("Episodes")
+    # plt.ylabel("Rewards")
 
     rewards = []
 
     for i in range(num_agents):
         agent = Agent(
                 datapath,
-                 battery_capacity,
+                 battery_capacity * max(1, (4 * i)),
                  storage_capacity,
                  power_idle,
                  power_max,
@@ -63,8 +63,9 @@ def multiple_train(num_agents):
                  proc_interval,
                  max_irradiation,
                  pv_efficiency,
-                 pv_area,
-                 fps * (i+1),
+                 pv_area * (1/(i+1)),
+                 fps,
+                #  fps * (i+1),
                  seed,
                  battery_bins,
                  time_bins,
@@ -79,49 +80,55 @@ def multiple_train(num_agents):
         results = agent.train()
         rewards.append(results[0])
 
-        plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{fps * (i+1)}fps - {int(battery_capacity)}Wh", alpha = 1.0)        
+        # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{int(battery_capacity * max(1, (4 * i)))}Wh", alpha = 1.0)        
         # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{storage_capacity * i / 1000}k ", alpha = 1.0)        
         # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{battery_capacity * (i+1) / 1000} kWh ", alpha = 1.0)
 
-    rewards = []
+    # rewards = []
 
-    for i in range(num_agents):
-        agent = Agent(
-                datapath,
-                 int(battery_capacity / 4),
-                 storage_capacity,
-                 power_idle,
-                 power_max,
-                 delta_time,
-                 proc_interval,
-                 max_irradiation,
-                 pv_efficiency,
-                 pv_area,
-                 fps * (i+1),
-                 seed,
-                 battery_bins,
-                 time_bins,
-                 alpha,
-                 gamma,
-                 eps_min,
-                 eps_dec,
-                 eps_init,
-                 episodes
-        )
+    # for i in range(num_agents):
+    #     agent = Agent(
+    #             datapath,
+    #              int(battery_capacity / 4),
+    #              storage_capacity,
+    #              power_idle,
+    #              power_max,
+    #              delta_time,
+    #              proc_interval,
+    #              max_irradiation,
+    #              pv_efficiency,
+    #              pv_area,
+    #              fps,
+    #             #  fps * (i+1),
+    #              seed,
+    #              battery_bins,
+    #              time_bins,
+    #              alpha,
+    #              gamma,
+    #              eps_min,
+    #              eps_dec,
+    #              eps_init,
+    #              episodes
+    #     )
 
-        results = agent.train()
-        rewards.append(results[0])
+    #     results = agent.train()
+    #     rewards.append(results[0])
 
-        plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{fps * (i+1)}fps - {int(battery_capacity / 4)}Wh", alpha = 1.0)        
-
+    #     plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{fps * (i+1)}fps - {int(battery_capacity / 4)}Wh", alpha = 1.0)        
+    
+    plt.suptitle("Single agent - rewards comparison")
+    plt.title(f"p_I = {power_idle}W, p_F = {power_max}W")        
+    plt.xlabel("Episodes")
+    plt.ylabel("Rewards")
+    
+    for i in range(0, num_agents):
+        plt.plot(rewards[i], label = f"raw {int(battery_capacity * max(1, (4 * i)))}Wh", alpha = 0.3)
+        plt.plot(range(window - 1, len(rewards[i])), np.convolve(rewards[i], np.ones(window)/window, mode='valid'), label = f"smooth {int(battery_capacity * max(1, (4 * i)))}Wh", alpha = 1.0)        
 
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
     plt.savefig(f"fps_rewards_comparison_plot_qlt.pdf")
-    # plt.savefig(f"epsilon_rewards_comparison_plot_qlt_{fps}fps_{battery_capacity / 1000}kWh.pdf")
-    # plt.savefig(f"storage_rewards_comparison_plot_qlt_{fps}fps_{battery_capacity / 1000}kWh.pdf")
-    # plt.savefig(f"battery_rewards_comparison_plot_qlt_{fps}fps_{storage_capacity / 1000}k.pdf")
     plt.close()
 
 def battery_frames_rewards_train():
@@ -274,8 +281,8 @@ def single_train():
     agent.plot_processed_storage(results[2], results[5])
     # agent.plot_frames(results[1], results[2])
 
-# multiple_train(2)
-single_train()
+multiple_train(2)
+# single_train()
 # battery_frames_rewards_train()
 
 # window = 10

@@ -196,7 +196,7 @@ class EnergyPVEnv(gymnasium.Env):
         if idx < 0 or idx >= len(self.data):
             return 0.0
         
-        return round(self.data.iloc[idx]['ghi'] / self.max_irrad, 2)
+        return self.data.iloc[idx]['ghi'] / self.max_irrad
     
     def get_pv_energy(self, irradiance):
         if(irradiance <= 0.0):
@@ -234,7 +234,7 @@ class EnergyPVEnv(gymnasium.Env):
                 reward = (processed / processable) * self.battery_level * (processed / self.storage)
                 self.storage -= processed
                 self.total_frames_processed += processed
-                return processed
+                return reward
                 # return processed / processable
             except:
                 return 0

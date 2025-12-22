@@ -105,6 +105,7 @@ class Agent:
         dropped_frames = []
         processed_frames = []
         storage = []
+        daily_backlogs = []
         processed_stored_ratio = []
 
         battery = []
@@ -134,6 +135,8 @@ class Agent:
             daily_energy = []
             energy.append(0.0)
             battery_trace = []            
+        
+            daily_backlog = []
         
             trace = []
             info = {}
@@ -165,7 +168,6 @@ class Agent:
                 battery_avg += (info['battery_level'] * 100)
                 avg_irrad += info['irradiance']
                 storage_temp += info['storage_level']
-                battery_trace.append(info['battery_level'] * 100)
                 
                 action_avg += (action * 5)
                 action_trace.append(action * 5)
@@ -174,6 +176,11 @@ class Agent:
 
                 if(info['battery_level'] == 0.0):
                     discharge += 1
+                    
+                if(episode % int(self.episodes / 10) == 0):
+                    daily_backlog.append(self.env.storage)
+                    battery_trace.append(info['battery_level'] * 100)
+
 
                 # input("Press enter to continue...")
             
@@ -183,7 +190,6 @@ class Agent:
                 battery_traces.append(battery_trace)
                 action_traces.append(action_trace)
                 energy_traces.append(daily_energy)
-            
             
             # print(f"episode: {episode}/{self.episodes} - reward: {partial_reward} - eps: {self.eps}")
             print(f"episode: {episode}/{self.episodes} - reward: {round(partial_reward, 1)} - avg_batt: {round(battery_avg / self.env.max_steps, 2)} - eps: {self.eps}")
@@ -207,6 +213,10 @@ class Agent:
             # self.save_table(episode)
             
             rewards.append(partial_reward)
+            # print(daily_backlog)
+            
+            if(len(daily_backlog) > 0):
+                daily_backlogs.append(daily_backlog)
             # input("Press enter to continue...")
         
         self.plot_cumulative_trace(cumulative_traces)
@@ -215,15 +225,16 @@ class Agent:
         
         self.plot_battery(battery)
         
-        self.plot_daily_energy_consumption(energy_traces)
+        # self.plot_daily_energy_consumption(energy_traces)
         
         self.plot_action(actions)
         self.plot_processed_stored_ratio(processed_stored_ratio)
         
-        self.plot_irradiance(irradiance)
-        self.plot_daily_irradiation(daily_irradiance)
+        # self.plot_irradiance(irradiance)
+        # self.plot_daily_irradiation(daily_irradiance)
         
         self.plot_battery_violations(discharges)
+        self.plot_storage_daily(daily_backlogs)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
@@ -231,7 +242,7 @@ class Agent:
 
     def plot_cumulative_trace(self, data):
         plt.title(f"B: {self.battery_capacity}, p_i: {self.p_idle}, p_F: {self.p_max}")
-        plt.suptitle("Q-Learning tabular - Cumulative rewards")
+        plt.suptitle("Single agent - Cumulative rewards")
         plt.xlabel("Step")
         plt.ylabel("Reward")
         
@@ -245,7 +256,7 @@ class Agent:
         plt.close()    
             
     def plot_daily_battery(self, data):        
-        plt.suptitle("Q-Learning tabular - Daily battery")
+        plt.suptitle("Single agent - Daily battery")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
 
         plt.xlabel("Step")
@@ -264,7 +275,7 @@ class Agent:
         
     def plot_daily_action(self, data):
         window = 100        
-        plt.suptitle("Q-Learning tabular - Daily FPS")
+        plt.suptitle("Single agent - Daily FPS")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
 
         plt.xlabel("Step")
@@ -315,7 +326,7 @@ class Agent:
     
     def plot_battery_violations(self, data):
         window = 10        
-        plt.suptitle("Q-Learning tabular - Complete discharges")
+        plt.suptitle("Single agent - Complete discharges")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
 
         plt.xlabel("Step")
@@ -334,7 +345,7 @@ class Agent:
 
     def plot_rewards(self, data):
         window = 10
-        plt.suptitle("Q-Learning tabular - rewards")
+        plt.suptitle("Single agent - rewards")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         
         plt.xlabel("Episodes")
@@ -348,7 +359,7 @@ class Agent:
 
     def plot_frames(self, dropped, processed):
         window = 10
-        plt.suptitle("Q-Learning tabular - frames")
+        plt.suptitle("Single agent - frames")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         plt.xlabel("Episodes")
         plt.ylabel("Frames")
@@ -365,7 +376,7 @@ class Agent:
 
     def plot_action(self, data):
         window = 10
-        plt.suptitle("Q-Learning tabular - Average fps")
+        plt.suptitle("Single agent - Average fps")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, max_fps = {self.env.fps}")
         plt.xlabel("Episodes")
         plt.ylabel("FPS")
@@ -385,7 +396,7 @@ class Agent:
         #     print(elem)
                     
         window = 10
-        plt.suptitle("Q-Learning tabular - battery level")
+        plt.suptitle("Single agent - battery level")
         plt.title(f"B = {self.battery_capacity}, P_i = {self.p_idle}, P_f = {self.p_max}, fps = {self.env.fps}")
         
         plt.xlabel("Episodes")
@@ -412,7 +423,7 @@ class Agent:
         
     def plot_processed_stored_ratio(self, data):
         window = 10
-        plt.suptitle("Q-Learning tabular - Processed/stored")
+        plt.suptitle("Single agent - Processed/stored")
         plt.title(f"B = {self.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
         plt.xlabel("Episodes")
         plt.ylabel("Frames")
@@ -428,7 +439,7 @@ class Agent:
         
     def plot_processed_storage(self, processed, stored):
         window = 10
-        plt.suptitle("Q-Learning tabular - Frames management")
+        plt.suptitle("Single agent - Frames management")
         plt.title(f"B = {self.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
         plt.xlabel("Episodes")
         plt.ylabel("Frames")
@@ -445,7 +456,7 @@ class Agent:
         plt.savefig(f"frames_qlt_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
         plt.close()
         
-        plt.title("Q-Learning tabular - Average storage")
+        plt.title("Single agent - Average storage")
         plt.xlabel("Episodes")
         plt.ylabel("Storage level")
 
@@ -458,12 +469,12 @@ class Agent:
         plt.close()
 
     def plot_storage_daily(self, storage_traces):
-        plt.title("Q-Learning tabular - Daily storage")
+        plt.title("Single agent - Daily storage")
         plt.xlabel("Step")
         plt.ylabel("storage")
         
         for i in range(len(storage_traces)):
-            plt.plot(storage_traces[i], label = f"{str(i * (self.episodes/10))}-th ep." )
+            plt.plot(storage_traces[i], label = f"{str(i * int(self.episodes/10))}-th ep." )
         
         plt.grid()
         plt.legend()
