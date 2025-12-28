@@ -6,8 +6,9 @@ from copy import copy
 import functools
 import numpy as np
 import random
-import interpol as ip
 
+import interpol as ip
+import jit_reward_function as jrf
 
 class CustomEnvironment(ParallelEnv):
     metadata = {
@@ -32,8 +33,13 @@ class CustomEnvironment(ParallelEnv):
         self.panel_efficiency = 0.2
         
         self.irradiance_data = []
+        self.irradiance_arrays = []
+        
         for filepath in irradiance_datapaths:
-            self.irradiance_data.append(ip.interpolate(filepath, delta_time, proc_interval))
+            df = ip.interpolate(filepath, delta_time, proc_interval)
+            self.irradiance_data.append(df)
+            
+            self.irradiance_arrays.append(df['ghi'].values)
         
         for elem in self.irradiance_data:
             print(len(elem))
@@ -333,6 +339,48 @@ class CustomEnvironment(ParallelEnv):
         # return 1 - (self.backlogs[agent_id]/((self._processing_rate * 3600)))
             
     def calculate_reward(self, agent_id):
+        fti = self.actions[agent_id][0]
+        xti = self.actions[agent_id][1]
+        gti = self.actions[agent_id][2]
+        hti = self.actions[agent_id][3]
+        
+        # print(f"agent_id: {agent_id} - fti: {fti} - xti: {xti} - gti: {gti} - hti: {hti}")
+        
+        ft_gti = self.actions[gti][0]
+        xt_gti = self.actions[gti][1]
+        gt_gti = self.actions[gti][2]
+        ht_gti = self.actions[gti][3]
+        
+        idx = (self.episode * self.max_steps) + self.timestep
+        # print(idx)
+        irradiance = self.irradiance_arrays[agent_id][idx]
+        self.irradiance_level[agent_id] = self.irradiance_arrays[agent_id][idx] / self.max_irrad
+        
+        return jrf.jit_calculate_reward(fti,
+                                   xti,
+                                   gti,
+                                   hti,
+                                   ft_gti,
+                                   xt_gti,
+                                   gt_gti,
+                                   ht_gti,
+                                   irradiance,
+                                   self.panel_surfaces[agent_id],
+                                   self.panel_efficiency,
+                                   self.backlogs[agent_id],
+                                   self.e_idle,
+                                   self.e_frame,
+                                   self.e_tx_rx,
+                                   self.battery_energies[agent_id],
+                                   self.battery_capacities[agent_id],
+                                   self._processing_rate,
+                                   self._proc_interval,
+                                   agent_id
+                                   )
+        
+        
+            
+    def calculate_reward_non_opt(self, agent_id):
         # print(self.actions[agent_id])
         
         fti = self.actions[agent_id][0]
@@ -361,7 +409,7 @@ class CustomEnvironment(ParallelEnv):
         
         idx = (self.episode * self.max_steps) + self.timestep
         # print(idx)
-        self.irradiance_level[agent_id] = round(self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad, 2)
+        self.irradiance_level[agent_id] = self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad
         
         # --- NEW REWARD FUNCTION ---
         panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval * self.panel_efficiency
@@ -374,7 +422,7 @@ class CustomEnvironment(ParallelEnv):
         if(actual_battery <= needed_energy):
             # backlog -= processable
             # actual_battery = 0.0
-            return 0
+            return -1
         
         processed = min(processable, fti * self._proc_interval)
         local_reward = 0
@@ -388,6 +436,8 @@ class CustomEnvironment(ParallelEnv):
             # if(backlog > 0):
             local_reward = (processed / processable) * (actual_battery / self.battery_capacities[agent_id]) * (processed / backlog)
             backlog = max(backlog - processed, 0)
+        else:
+            return -1
         
         # else:
         #     print(f"agent {agent_id} -> processed/processable: {processed} / {processable}")
@@ -419,11 +469,14 @@ class CustomEnvironment(ParallelEnv):
             
             if(actual_battery > needed_energy):
                 if(processable > 0):
+                    # offloading_reward = float(processed/processable) * (actual_battery / self.battery_capacities[agent_id])
                     offloading_reward = float(processed/processable) * (actual_battery / self.battery_capacities[agent_id]) * (processed / backlog)
                 else:
                     offloading_reward = 0
             else:
-                offloading_reward = 0
+                # return -1
+                # offloading_reward = 0
+                offloading_reward = -1
                     
         elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
             ht = min(hti, ht_gti)
@@ -434,11 +487,15 @@ class CustomEnvironment(ParallelEnv):
             
             if(actual_battery > needed_energy):
                 if(processable > 0):
+                    # offloading_reward = float(processed/processable) * (actual_battery / self.battery_capacities[agent_id])
                     offloading_reward = float(processed/processable) * (actual_battery / self.battery_capacities[agent_id]) * (processed / backlog)
                 else:
                     offloading_reward = 0
             else:
-                offloading_reward = 0
+                # return -1
+                # offloading_reward = 0
+                offloading_reward = -1
+
         
         # print(f"agent {agent_id} OFF {xti} -> processed/processable: {processed} / {processable}")
         # input()
@@ -533,7 +590,7 @@ class CustomEnvironment(ParallelEnv):
 
             idx = (self.episode * self.max_steps) + self.timestep
             # print(idx)
-            self.irradiance_level[agent_id] = self.irradiance_data[agent_id].iloc[idx]['ghi'] / self.max_irrad
+            self.irradiance_level[agent_id] = self.irradiance_arrays[agent_id][idx] / self.max_irrad
             panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval * self.panel_efficiency
             
             # print(f"\nagent {agent_id} BEFORE -> fti: {fti} - hti: {hti}")
@@ -628,8 +685,6 @@ class CustomEnvironment(ParallelEnv):
             self.states[agent_id][0] = round(self.battery_energies[agent_id] / self.battery_capacities[agent_id], 2)
             self.states[agent_id][1] = self.calculate_backlog_level(agent_id)
             self.states[agent_id][2] = round(self.timestep / self.max_steps, 4)
-
-
 
         # return
         # # frames_arrived = self._arrival_rate * self._proc_interval
