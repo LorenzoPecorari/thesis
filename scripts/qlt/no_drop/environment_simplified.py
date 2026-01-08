@@ -224,8 +224,8 @@ class EnergyPVEnv(gymnasium.Env):
         actual = battery + panel_energy
         needed = action * self.interval * self.e_frame + self.e_idle
         
-        processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
-        processed = min(processable, action * self.interval, self.storage)
+        processable = max(min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval, self.storage), 0)
+        processed = min(processable, action * self.interval)
         backlog = self.storage
         
         if(actual > needed and processable > 0):
@@ -234,14 +234,14 @@ class EnergyPVEnv(gymnasium.Env):
             self.total_frames_processed += processed
 
             try:
-                return (processed / processable) * self.battery_level * (processed / backlog)
+                return (processed / processable) * (actual / self.battery_capacity) * (processed / backlog)
                 # return processed / processable
             except:
-                return (processed / processable) * self.battery_level
+                return (processed / processable) * (actual / self.battery_capacity)
         else:
             self.update_battery_level(panel_energy - self.e_idle)
             if(processable == 0 and action == 0):
-                return self.battery_level
+                return (actual / self.battery_capacity)
             else:
                 return 0
         # processed = min(processable, action * self.interval)
