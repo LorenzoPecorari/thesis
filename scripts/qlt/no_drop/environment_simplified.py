@@ -143,7 +143,7 @@ class EnergyPVEnv(gymnasium.Env):
             super().reset()
             self.day = seed % 365
         
-        self.battery_level = 0.5
+        self.battery_level = 0.8
         self.storage = 0
         
         self.inner_step = 0
@@ -226,19 +226,24 @@ class EnergyPVEnv(gymnasium.Env):
         
         processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
         processed = min(processable, action * self.interval, self.storage)
+        backlog = self.storage
         
-        self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
-        self.storage = max(self.storage - processed, 0)
-        self.total_frames_processed += processed
-        
-        if(actual > needed and self.battery_level > 0.0):
+        if(actual > needed and processable > 0):
+            self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
+            self.storage = max(self.storage - processed, 0)
+            self.total_frames_processed += processed
+
             try:
-                return (processed / processable) * 100 * self.battery_level
+                return (processed / processable) * self.battery_level * (processed / backlog)
                 # return processed / processable
             except:
-                return 0
+                return (processed / processable) * self.battery_level
         else:
-            return -100
+            self.update_battery_level(panel_energy - self.e_idle)
+            if(processable == 0 and action == 0):
+                return self.battery_level
+            else:
+                return 0
         # processed = min(processable, action * self.interval)
         
         # needed = processed * self.e_frame

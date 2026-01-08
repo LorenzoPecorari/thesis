@@ -58,7 +58,7 @@ class Agent:
         self.battery_capacity = battery_capacity
         
         # 3d table, |battery_levls| x |time_levels| x |actions|        
-        self.table = np.zeros((battery_bins, time_bins, (int(self.fps / 5) + 1)))
+        self.table = np.zeros((battery_bins, time_bins, (int(self.fps) + 1)))
 
     def choice_action(self, state, eps):
         b_idx, t_idx = self.state_discretization(state[0], state[1])
@@ -67,7 +67,7 @@ class Agent:
         # print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
         if np.random.random() < eps:
             # print("RANDOM")
-            return random.randint(0, int(self.fps / 5))
+            return random.randint(0, int(self.fps))
         else:
             # print("DECIDED")
             return np.argmax(self.table[b_idx, t_idx])
@@ -105,6 +105,7 @@ class Agent:
         dropped_frames = []
         processed_frames = []
         storage = []
+        stored = []
         daily_backlogs = []
         processed_stored_ratio = []
 
@@ -169,8 +170,8 @@ class Agent:
                 avg_irrad += info['irradiance']
                 storage_temp += info['storage_level']
                 
-                action_avg += (action * 5)
-                action_trace.append(action * 5)
+                action_avg += (action)
+                action_trace.append(action)
 
                 # print(info['battery_level'])
 
@@ -184,6 +185,8 @@ class Agent:
 
                 # input("Press enter to continue...")
             
+            storage_temp /= self.env.max_steps
+            stored.append(storage_temp)
             
             if(episode % int(self.episodes / 10) == 0):
                 cumulative_traces.append(trace)
@@ -235,6 +238,7 @@ class Agent:
         
         self.plot_battery_violations(discharges)
         self.plot_storage_daily(daily_backlogs)
+        self.plot_storage(stored)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, storage
 
@@ -252,7 +256,22 @@ class Agent:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"cumulative_rewards_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"cumulative_rewards_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
+        plt.close()    
+        
+    def plot_storage(self, data):
+        window = 10
+        plt.title(f"B: {self.battery_capacity}, p_i: {self.p_idle}, p_F: {self.p_max}")
+        plt.suptitle("Single agent - Average Backlog")
+        plt.xlabel("Step")
+        plt.ylabel("Reward")
+        
+        plt.plot(range(window - 1, len(data)), np.convolve(data, np.ones(window)/window, mode='valid'), label = f"smooth", alpha = 1.0)
+        
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
+        plt.tight_layout()
+        plt.savefig(f"backlog_avg_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()    
             
     def plot_daily_battery(self, data):        
@@ -270,7 +289,7 @@ class Agent:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"battery_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"battery_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()  
         
     def plot_daily_action(self, data):
@@ -287,7 +306,7 @@ class Agent:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"action_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"action_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()  
             
     def plot_daily_irradiation(self, data):
@@ -303,7 +322,7 @@ class Agent:
         
         plt.grid()
         plt.legend()
-        plt.savefig(f"daily_irradiance.pdf")
+        plt.savefig(f"daily_irradiance_{self.env.day}.pdf")
         plt.close()
     
     def plot_daily_energy_consumption(self, data):
@@ -321,7 +340,7 @@ class Agent:
         # plt.legend()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"daily_consumption.pdf")
+        plt.savefig(f"daily_consumption_{self.env.day}.pdf")
         plt.close()
     
     def plot_battery_violations(self, data):
@@ -338,7 +357,7 @@ class Agent:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"discharges_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"discharges_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
     
     ### training metrics
@@ -354,7 +373,7 @@ class Agent:
         plt.plot(data, label = "raw", alpha = 0.3)
         plt.grid()
         plt.legend()
-        plt.savefig(f"rewards_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"rewards_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
 
     def plot_frames(self, dropped, processed):
@@ -371,7 +390,7 @@ class Agent:
         
         plt.grid()
         plt.legend()
-        plt.savefig(f"frames_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"frames_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
 
     def plot_action(self, data):
@@ -386,7 +405,7 @@ class Agent:
         
         plt.grid()
         plt.legend()
-        plt.savefig(f"action_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"action_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
         
 
@@ -405,7 +424,7 @@ class Agent:
         plt.plot(data, label = "raw", alpha = 0.3)
         plt.grid()
         plt.legend()
-        plt.savefig(f"battery_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"battery_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
 
     def plot_irradiance(self, data):
@@ -418,7 +437,7 @@ class Agent:
         plt.plot(data, label = "raw", alpha = 0.3)
         plt.grid()
         plt.legend()
-        plt.savefig("irradiance_plot.pdf")
+        plt.savefig("irradiance_plot_{self.env.day}.pdf")
         plt.close()
         
     def plot_processed_stored_ratio(self, data):
@@ -434,7 +453,7 @@ class Agent:
         plt.plot(data, label = "raw", alpha = 0.3)
         plt.grid()
         plt.legend()
-        plt.savefig(f"processed_stored_ratio_{self.battery_capacity}Wh_{self.fps}fps.pdf")
+        plt.savefig(f"processed_stored_ratio_{self.battery_capacity}Wh_{self.fps}fps_{self.env.day}.pdf")
         plt.close()
         
     def plot_processed_storage(self, processed, stored):
@@ -453,7 +472,7 @@ class Agent:
         plt.legend()
         # plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         # plt.tight_layout()
-        plt.savefig(f"frames_qlt_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"frames_qlt_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
         
         plt.title("Single agent - Average storage")
@@ -465,22 +484,27 @@ class Agent:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         plt.tight_layout()
-        plt.savefig(f"storage_comparison_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"storage_comparison_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
 
-    def plot_storage_daily(self, storage_traces):
-        plt.title("Single agent - Daily storage")
+    def plot_storage_daily(self, data):
+        window = 10
+        plt.suptitle("Single agent - Daily storage")
+        plt.title(f"B = {self.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
+
         plt.xlabel("Step")
         plt.ylabel("storage")
         
-        for i in range(len(storage_traces)):
-            plt.plot(storage_traces[i], label = f"{str(i * int(self.episodes/10))}-th ep." )
+        for i in range(len(data)):
+            plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * int(self.episodes/10))}-th ep", alpha = 1.0)
+
+            # plt.plot(storage_traces[i], label = f"{str(i * int(self.episodes/10))}-th ep." )
         
         plt.grid()
         plt.legend()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"storage_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt.pdf")
+        plt.savefig(f"storage_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
 
             

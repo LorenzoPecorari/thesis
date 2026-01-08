@@ -64,7 +64,7 @@ class CustomEnvironment(ParallelEnv):
         # internal counters for episode compeltion 
         self.timestep = 0
         self.max_steps = (3600 / proc_interval) * 5
-        self.episode = 355
+        self.episode = 172
         self._w = w
         
         try:
@@ -341,6 +341,8 @@ class CustomEnvironment(ParallelEnv):
         # return 1 - (self.backlogs[agent_id]/((self._processing_rate * 3600)))
             
     def calculate_reward(self, agent_id):
+        
+        # extracting action of local agent
         fti = self.actions[agent_id][0]
         xti = self.actions[agent_id][1]
         gti = self.actions[agent_id][2]
@@ -348,13 +350,15 @@ class CustomEnvironment(ParallelEnv):
         
         # print(f"agent_id: {agent_id} - fti: {fti} - xti: {xti} - gti: {gti} - hti: {hti}")
         
+        # exctracting action of remote agent
         ft_gti = self.actions[gti][0]
         xt_gti = self.actions[gti][1]
         gt_gti = self.actions[gti][2]
         ht_gti = self.actions[gti][3]
         
         idx = (self.episode * self.max_steps) + self.timestep
-        # print(idx)
+
+        # taking irradiance of specific moment of episode
         irradiance = self.irradiance_arrays[agent_id][idx]
         self.irradiance_level[agent_id] = self.irradiance_arrays[agent_id][idx] / self.max_irrad
         
@@ -634,14 +638,14 @@ class CustomEnvironment(ParallelEnv):
 
         infos = {a: {} for a in self.agents}
         
-        self.episode = 355
+        self.episode = 172
 
         return observations, infos
         
     def update_states(self):
         # for each agent, update its state on the basis of the actions it executes
         for agent_id in range(0, self._num_agents):
-
+            # extracting local and remote action vectors
             fti = self.actions[agent_id][0]
             xti = self.actions[agent_id][1]
             gti = self.actions[agent_id][2]
@@ -652,11 +656,13 @@ class CustomEnvironment(ParallelEnv):
             gt_gti = self.actions[gti][2]
             ht_gti = self.actions[gti][3]
 
+            # determining energy coming from panel energy
             idx = (self.episode * self.max_steps) + self.timestep
             # print(idx)
             self.irradiance_level[agent_id] = self.irradiance_arrays[agent_id][idx] / self.max_irrad
             panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval * self.panel_efficiency
 
+            # capping offloading framerate if they exceeds maximum processing rate
             if(fti + hti) > self._processing_rate:
                 hti = self._processing_rate - fti
                 
@@ -689,21 +695,23 @@ class CustomEnvironment(ParallelEnv):
                 #     ht_gti = self._processing_rate - ft_gti
             
             # --- NEW REWARD FUNCTION ---
-            
-            local_processing = 0
-            offloading_processing = 0
-            
+
+            # available enegy as sum of actual battery energy and the one coming from pv
             actual_battery = self.battery_energies[agent_id] + panel_energy
 
             backlog = self.backlogs[agent_id]
             
             processable = max(min(backlog, int((actual_battery - self.e_idle) / self.e_frame), self._processing_rate * self._proc_interval), 0)
+            
+            # needed energy for executing the local sub-action
             needed_energy = (fti * self._proc_interval * self.e_frame) + self.e_idle
             
             # if(processable > 0):
             #     needed_energy = (processed * self.e_frame) + self.e_idle
-               
+            
+            # checking if it can compute on the basis of value of processable and available energy wrt needed one
             if(actual_battery > needed_energy and processable > 0):
+                # decrease battery and backlog
                 processed = min(processable, fti * self._proc_interval)
                 self.backlogs[agent_id] = max(backlog - processed, 0)
                 actual_battery = max((actual_battery - needed_energy), 0)
@@ -711,6 +719,8 @@ class CustomEnvironment(ParallelEnv):
             
             else:
                 # input(f"actual: {actual_battery} - needed: {needed_energy} - idle: {self.e_idle} - processable: {processable} - action: {fti * self._proc_interval}")
+                
+                #decrease battery only by idle energy
                 actual_battery = max(actual_battery - self.e_idle, 0)
             
             # else:
@@ -719,12 +729,14 @@ class CustomEnvironment(ParallelEnv):
             # self.backlogs[agent_id] = backlog
             remaining_framerate = self._processing_rate - fti
             
+            # SENDER mode
             if(remaining_framerate > 0 and xti != 0):
                 if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
                     ht = min(hti, ht_gti)
                     backlog = self.backlogs[agent_id]
                     
                     # needed_energy = ht * self._proc_interval * self.e_tx_rx
+                    # processable takes in consideration  backlog, remaining battery and remaining framerate
                     processable = max(min(backlog, int((actual_battery - self.e_idle) / self.e_tx_rx), remaining_framerate * self._proc_interval), 0)
                     # if(processable > 0):
                     processed = min(ht * self._proc_interval, processable)
@@ -736,6 +748,7 @@ class CustomEnvironment(ParallelEnv):
                         offloading_processing = processed / self._proc_interval
                         self.hs_counter[agent_id] += 1
             
+                # RECEIVER mode -> more energy demanding due to higher energy needed for each frame
                 if(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
                     ht = min(hti, ht_gti)
                     backlog = self.backlogs[gti]
@@ -1086,7 +1099,7 @@ class CustomEnvironment(ParallelEnv):
         truncations = {a: False for a in self.agents}
         
         if(self.timestep == (self.max_steps - 1)):
-            self.episode = 355
+            self.episode = 172
             truncations = {a: True for a in self.agents}
         
         self.timestep += 1

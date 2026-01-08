@@ -6,7 +6,8 @@ import numpy as np
 # for realistic simulations, battery_capacity = 25Wh or 100Wh and fps_max = 30
 
 # datapath = '../../../dataset/merged_2023-2024.csv'
-datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
+datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
+# datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
 # datapath = '../../../dataset/csv_42.51676443693097_12.526882609673224_fixed_23_180_PT15M.csv'
 battery_capacity = 25            # [Wh]
 storage_capacity = 54000
@@ -27,8 +28,8 @@ max_irradiation = 1000
 
 battery_bins = 15
 time_bins = 15
-alpha = 0.1
-gamma = 0.9
+alpha = 0.05
+gamma = 0.99
 eps_min = 0.05
 eps_dec = 0.997
 eps_init = 1.0
@@ -128,7 +129,13 @@ def multiple_train(num_agents):
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"fps_rewards_comparison_plot_qlt.pdf")
+    if(seed == "fixed_winter"):
+        plt.savefig(f"fps_rewards_comparison_plot_qlt_356.pdf")
+    elif(seed == "fixed_summer"):
+        plt.savefig(f"fps_rewards_comparison_plot_qlt_173.pdf")
+    else:
+        plt.savefig(f"fps_rewards_comparison_plot_qlt.pdf")
+    
     plt.close()
 
 def battery_frames_rewards_train():
@@ -178,7 +185,7 @@ def battery_frames_rewards_train():
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"fps_rewards_comparison_plot_qlt.pdf")
+    plt.savefig(f"fps_rewards_comparison_plot_qlt_355.pdf")
     plt.close()
     
     # Plot processed frames
@@ -200,7 +207,7 @@ def battery_frames_rewards_train():
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"fps_processed_comparison_plot_qlt.pdf")
+    plt.savefig(f"fps_processed_comparison_plot_qlt_355.pdf")
     plt.close()
     
     # Plot storage
@@ -222,7 +229,7 @@ def battery_frames_rewards_train():
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"fps_storage_comparison_plot_qlt.pdf")
+    plt.savefig(f"fps_storage_comparison_plot_qlt_355.pdf")
     plt.close()
 
 def single_train():
@@ -274,7 +281,7 @@ def single_train():
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"rewards_{battery_capacity}Wh_{fps}fps_qlt.pdf")
+    plt.savefig(f"rewards_{battery_capacity}Wh_{fps}fps_qlt_355.pdf")
     plt.close()
     
     # agent.plot_battery(results[3])
@@ -355,9 +362,9 @@ multiple_train(2)
 # plt.grid()
 # plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
 # plt.tight_layout()
-# plt.savefig(f"battery_rewards_comparison_plot_qlt_{fps}fps.pdf")
+# plt.savefig(f"battery_rewards_comparison_plot_qlt_{fps}fps_355.pdf")
 # # plt.ylim(1.1*1e6, 1.3*1e6)
-# # plt.savefig("battery_rewards_comparison_plot_qlt_zoom.pdf")
+# # plt.savefig("battery_rewards_comparison_plot_qlt_zoom_355.pdf")
 
 # plt.close()
 
