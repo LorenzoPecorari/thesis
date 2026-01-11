@@ -36,11 +36,11 @@ It is needed to provide to the environment :
  - the efficiency and the area of the photovoltaic panel.
  
 There are (fps + 1) action that can be chosen and each of them tell which is the framerate
-to adopt in such step on the environment in order to compute the frames that arrives in the storage at each time.
+to adopt in such step on the environment in order to compute the frames that arrives in the backlog at each time.
 
 If the action chosen allow to not drain all the energy stored in the battery until that moment,
-the reward will be the number of frames taken from the storage and computed, so (fps * interval between each step).
-Otherwise, the reawrd will be 0 and the number of frames extracted from the storage and computed will be based on 
+the reward will be the number of frames taken from the backlog and computed, so (fps * interval between each step).
+Otherwise, the reawrd will be 0 and the number of frames extracted from the backlog and computed will be based on 
 the energy of the battery.   
  
     
@@ -51,7 +51,7 @@ class EnergyPVEnv(gymnasium.Env):
     def __init__(self, 
                  datapath,
                  battery_capacity,
-                 storage_capacity,
+                 backlog_capacity,
                  power_idle,
                  power_max,
                  delta_time,
@@ -59,7 +59,8 @@ class EnergyPVEnv(gymnasium.Env):
                  max_irradiation,
                  pv_efficiency,
                  pv_area,
-                 fps):
+                 fps,
+                 arrival_rate):
         
         super().__init__()
         
@@ -71,8 +72,9 @@ class EnergyPVEnv(gymnasium.Env):
         self.battery_level = 0.0
         self.battery_capacity = battery_capacity * 3600             # [Wh -> Ws = J]
         
-        self.storage = 0
-        self.storage_capacity = storage_capacity * 100000000000        # UNBOUNDED!
+        self.backlog = 0
+        self.backlog_capacity = backlog_capacity * 100000000000        # UNBOUNDED!
+        self.backlog_level = 0
         
         self.pv_area = pv_area                                      # [m^2]
         self.pv_efficiency = pv_efficiency                          # [%]
@@ -90,7 +92,8 @@ class EnergyPVEnv(gymnasium.Env):
         self.interval = proc_interval                               # [s]
         self.delta_time = delta_time                                # [s]
         self.fps = fps                                              # [1/s]
-
+        self.arrival_rate = arrival_rate
+        
         # value of images to process in batch
         self.frames_per_interval = int(fps * proc_interval)
 
@@ -117,8 +120,8 @@ class EnergyPVEnv(gymnasium.Env):
         self.action_space = spaces.Discrete(self.fps+1)
         
         self.observation_space = spaces.Box(
-            low = np.array([0.0, 0.0]),
-            high = np.array([1.0, 1.0]),
+            low = np.array([0.0, 0.0, 0.0]),
+            high = np.array([1.0, 3.0, 1.0]),
             dtype = np.float64
         )
     
@@ -144,7 +147,9 @@ class EnergyPVEnv(gymnasium.Env):
             self.day = seed % 365
         
         self.battery_level = 0.5
-        self.storage = 0
+        
+        self.backlog = 0
+        self.backlog_level = self.calculate_backlog()
         
         self.inner_step = 0
         self.current_step = 0
@@ -160,6 +165,19 @@ class EnergyPVEnv(gymnasium.Env):
 
         return obs, info
     
+    def calculate_backlog(self):
+        qty = self.backlog
+        max_backlog = self.interval * self.arrival_rate * 10
+        
+        if(qty == 0):
+            return 0
+        elif(qty > 0 and qty < int(max_backlog / 3)):
+            return 1
+        elif(qty >= int(max_backlog / 3) and qty < int((2/3) * max_backlog)):
+            return 2
+        else:
+            return 3
+        
 
     def step(self, action):
         self.inner_step += 1
@@ -172,7 +190,7 @@ class EnergyPVEnv(gymnasium.Env):
         
         self.irrad = self.get_irradiance()
         e_pv = self.get_pv_energy(self.irrad * self.max_irrad)
-        self.storage += (15 * self.interval)
+        self.backlog += (15 * self.interval)
         
         reward = self.calculate_reward(action, e_pv)
         
@@ -224,26 +242,49 @@ class EnergyPVEnv(gymnasium.Env):
         actual = battery + panel_energy
         needed = action * self.interval * self.e_frame + self.e_idle
         
-        processable = max(min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval, self.storage), 0)
-        processed = min(processable, action * self.interval)
-        backlog = self.storage
+        processable = max(min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval, self.backlog), 0)
+        processed = 0
+        backlog = self.backlog
+        
+        reward = 0
         
         if(actual > needed and processable > 0):
-            self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
-            self.storage = max(self.storage - processed, 0)
-            self.total_frames_processed += processed
+            # input(f"{backlog} - old")
+            battery = panel_energy - ((processed * self.e_frame) + self.e_idle)
+            processed = min(processable, action * self.interval)
+            new_backlog = self.backlog - processed
+            # input(f"{backlog} - new")
+            
+            # self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
+            # self.backlog = max(self.backlog - processed, 0)
+            # self.total_frames_processed += processed
 
             try:
-                return (processed / processable) * (actual / self.battery_capacity) * (processed / backlog)
+                reward = (processed / processable) * (actual / self.battery_capacity) * (processed / backlog)
                 # return processed / processable
             except:
-                return (processed / processable) * (actual / self.battery_capacity)
+                reward = (processed / processable) * (actual / self.battery_capacity)
+            finally:
+                backlog = new_backlog
         else:
-            self.update_battery_level(panel_energy - self.e_idle)
+            battery = panel_energy - self.e_idle
+            # self.update_battery_level(panel_energy - self.e_idle)
+            
             if(processable == 0 and action == 0):
-                return (actual / self.battery_capacity)
+                reward = (actual / self.battery_capacity)
             else:
-                return 0
+                reward = 0
+                
+        self.update_state(battery, backlog, processed)
+        return reward
+    
+    def update_state(self, battery, backlog, processed):
+        self.update_battery_level(battery)
+        self.backlog = max(backlog, 0)
+        self.total_frames_processed += processed
+
+        return
+        
         # processed = min(processable, action * self.interval)
         
         # needed = processed * self.e_frame
@@ -253,13 +294,13 @@ class EnergyPVEnv(gymnasium.Env):
         # if(actual > needed):
         #     if(processable > 0):
         #         reward = (processed / processable) * self.battery_level * 100
-        #         self.storage -= processed
+        #         self.backlog -= processed
         #         self.total_frames_processed += processed
         #         return reward
         #     else:
         #         return -100
         # else:
-        #     self.storage -= processed
+        #     self.backlog -= processed
         #     self.total_frames_processed += processed
         #     return -100
             
@@ -267,7 +308,7 @@ class EnergyPVEnv(gymnasium.Env):
         if(actual > needed and self.battery_level > 0.0):
             try:
                 reward = (processed / processable) * self.battery_level * 100
-                self.storage -= processed
+                self.backlog -= processed
                 self.total_frames_processed += processed
                 return reward
                 # return processed / processable
@@ -298,7 +339,7 @@ class EnergyPVEnv(gymnasium.Env):
         #     # Consuma solo idle
         #     self.update_battery_level(panel_energy - self.e_idle)
         #     self.energy_consumption = self.e_idle
-        #     self.storage += (self.fps * self.interval)
+        #     self.backlog += (self.fps * self.interval)
         #     self.total_frames_processed += 0
             
         #     # Reward minimo (non zero per non confondere)
@@ -313,7 +354,7 @@ class EnergyPVEnv(gymnasium.Env):
         
         self.energy_consumption = (processed * self.e_frame) + self.e_idle
         
-        self.storage -= processed
+        self.backlog -= processed
         self.total_frames_processed += processed
         
         reward = 0
@@ -374,12 +415,12 @@ class EnergyPVEnv(gymnasium.Env):
         
         # if(requested >= processable):
         #     self.update_battery_level((battery - self.e_idle + panel_energy - (processable * self.e_frame)))
-        #     self.storage -= processable
+        #     self.backlog -= processable
         #     self.total_frames_processed += processable
         #     return 0
         # else:
         #     self.update_battery_level((battery - self.e_idle + panel_energy - (requested * self.e_frame)))
-        #     self.storage -= requested
+        #     self.backlog -= requested
         #     self.total_frames_processed += requested
         #     return (requested / processable) * 100
         
@@ -402,7 +443,7 @@ class EnergyPVEnv(gymnasium.Env):
         input(f"HALT! requested: {frames_per_interval} - processed: {max_processable}")
         
         self.update_battery_level(panel_energy - energy_used)
-        self.storage -= frames_processed
+        self.backlog -= frames_processed
         self.total_frames_processed += frames_processed
         
         # print(f"requested: {frames_per_interval} - processed: {frames_processed}")
@@ -420,7 +461,7 @@ class EnergyPVEnv(gymnasium.Env):
         # VERSIONE 1     
         if((actual_battery_energy + panel_energy) >= energy_needed):
             self.update_battery_level(panel_energy - energy_needed)
-            self.storage -= frames_per_interval
+            self.backlog -= frames_per_interval
             self.total_frames_processed += frames_per_interval
             return frames_per_interval
             
@@ -439,7 +480,7 @@ class EnergyPVEnv(gymnasium.Env):
             # print(f"estimated: {frames_per_interval} - processed: {processable} - ")
             # input("Press ENTER to continue...")
             # print(f"negative delta: {processable - frames_per_interval}")
-            self.storage -= processable
+            self.backlog -= processable
             self.update_battery_level(panel_energy - (self.e_idle + (processable * self.e_frame)))
             # return -1
             return (processable - frames_per_interval)
@@ -452,7 +493,7 @@ class EnergyPVEnv(gymnasium.Env):
             'irradiance': self.irrad,
             'battery_level': self.battery_level,
             'battery_wh': self.battery_level * self.battery_capacity,
-            'storage_level': self.storage,
+            'backlog_level': self.backlog,
             'energy_consumption': self.energy_consumption,
             'day': self.day,
             'frames_processed': self.total_frames_processed,
@@ -462,10 +503,12 @@ class EnergyPVEnv(gymnasium.Env):
 
     def get_observation(self):
         self.irrad = self.get_irradiance()
+        self.backlog_level = self.calculate_backlog()
         self.time = round(self.inner_step / self.steps_per_day_data, 2)
         
         obs = np.array([
             round(self.battery_level, 2),
+            round(self.backlog_level, 1),
             round(self.time, 2)
         ], dtype=np.float64)
         

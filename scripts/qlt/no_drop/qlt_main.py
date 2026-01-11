@@ -10,7 +10,7 @@ datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_1
 # datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2023.csv'
 # datapath = '../../../dataset/csv_42.51676443693097_12.526882609673224_fixed_23_180_PT15M.csv'
 battery_capacity = 25            # [Wh]
-storage_capacity = 54000
+backlog_capacity = 54000
 power_idle = 2.6                       # [W]
 power_max = 6.0                    # [W]
 delta_time = 15 * 60                    # [sec]
@@ -19,9 +19,10 @@ pv_efficiency = 0.2
 # pv_area = 10 / (1200 * pv_efficiency)
 pv_area = (1.0)
 fps = 20
+arrival_rate = 15
 
-# seed = "fixed_winter"
-seed = "fixed_summer"
+seed = "fixed_winter"
+# seed = "fixed_summer"
 # seed = "linear"
 
 max_irradiation = 1000
@@ -41,7 +42,7 @@ episodes = 2001
 def multiple_train(num_agents):
     window = 10
     # plt.subplots(figsize=(8, 6))
-    # plt.title(f"fps = {fps}, p_I = {power_idle}, p_F = {power_max}, storage = {storage_capacity}")
+    # plt.title(f"fps = {fps}, p_I = {power_idle}, p_F = {power_max}, backlog = {backlog_capacity}")
     # plt.ylim(1000, 1500)
     # plt.title(f"fps = {fps}, p_I = {power_idle}W, p_F = {power_max}W, battery = {battery_capacity}Wh")    
 
@@ -57,7 +58,7 @@ def multiple_train(num_agents):
         agent = Agent(
                 datapath,
                  battery_capacity * max(1, (4 * i)),
-                 storage_capacity,
+                 backlog_capacity,
                  power_idle,
                  power_max,
                  delta_time,
@@ -66,6 +67,7 @@ def multiple_train(num_agents):
                  pv_efficiency,
                  pv_area * (1/(i+1)),
                  fps,
+                 arrival_rate,
                 #  fps * (i+1),
                  seed,
                  battery_bins,
@@ -82,7 +84,7 @@ def multiple_train(num_agents):
         rewards.append(results[0])
 
         # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{int(battery_capacity * max(1, (4 * i)))}Wh", alpha = 1.0)        
-        # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{storage_capacity * i / 1000}k ", alpha = 1.0)        
+        # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{backlog_capacity * i / 1000}k ", alpha = 1.0)        
         # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{battery_capacity * (i+1) / 1000} kWh ", alpha = 1.0)
 
     # rewards = []
@@ -91,7 +93,7 @@ def multiple_train(num_agents):
     #     agent = Agent(
     #             datapath,
     #              int(battery_capacity / 4),
-    #              storage_capacity,
+    #              backlog_capacity,
     #              power_idle,
     #              power_max,
     #              delta_time,
@@ -156,7 +158,7 @@ def battery_frames_rewards_train():
             current_fps = fps * fps_mult
             
             agent = Agent(
-                datapath, battery, storage_capacity,
+                datapath, battery, backlog_capacity,
                 power_idle, power_max, delta_time, proc_interval,
                 max_irradiation, pv_efficiency, pv_area,
                 current_fps,
@@ -166,7 +168,7 @@ def battery_frames_rewards_train():
 
             results = agent.train()
             
-            # results = [rewards, dropped, processed, battery, irradiance, storage]
+            # results = [rewards, dropped, processed, battery, irradiance, backlog]
             #            [0]      [1]      [2]        [3]      [4]         [5]
             
             label = f"{current_fps}fps - {battery}Wh"
@@ -210,12 +212,12 @@ def battery_frames_rewards_train():
     plt.savefig(f"fps_processed_comparison_plot_qlt_355.pdf")
     plt.close()
     
-    # Plot storage
+    # Plot backlog
     plt.figure()
-    plt.suptitle("Q-Learning tabular - Storage level")
+    plt.suptitle("Q-Learning tabular - backlog level")
     plt.title(f"p_I = {power_idle}W, p_F = {power_max}W")
     plt.xlabel("Episodes")
-    plt.ylabel("Storage level")
+    plt.ylabel("backlog level")
     
     for item in stored:
         for label, data in item.items():
@@ -229,7 +231,7 @@ def battery_frames_rewards_train():
     plt.grid()
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
     plt.tight_layout()
-    plt.savefig(f"fps_storage_comparison_plot_qlt_355.pdf")
+    plt.savefig(f"fps_backlog_comparison_plot_qlt_355.pdf")
     plt.close()
 
 def single_train():
@@ -240,7 +242,7 @@ def single_train():
     agent = Agent(
             datapath,
             battery_capacity,
-            storage_capacity,
+            backlog_capacity,
             power_idle,
             power_max,
             delta_time,
@@ -285,7 +287,7 @@ def single_train():
     plt.close()
     
     # agent.plot_battery(results[3])
-    agent.plot_processed_storage(results[2], results[5])
+    agent.plot_processed_backlog(results[2], results[5])
     # agent.plot_frames(results[1], results[2])
 
 multiple_train(2)

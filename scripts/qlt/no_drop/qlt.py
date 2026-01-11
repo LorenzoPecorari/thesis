@@ -7,7 +7,7 @@ class Agent:
     def __init__(self, 
                  datapath,
                  battery_capacity,
-                 storage_capacity,
+                 backlog_capacity,
                  power_idle,
                  power_max,
                  delta_time,
@@ -16,6 +16,7 @@ class Agent:
                  pv_efficiency,
                  pv_area,
                  fps,
+                 arrival_rate,
                  seed,
                  battery_bins,
                  time_bins,
@@ -30,7 +31,7 @@ class Agent:
         self.env = environment_simplified.EnergyPVEnv(
             datapath,
             battery_capacity,
-            storage_capacity,
+            backlog_capacity,
             power_idle,
             power_max,
             delta_time,
@@ -38,10 +39,13 @@ class Agent:
             max_irradiation,
             pv_efficiency,
             pv_area,
-            fps)
+            fps,
+            arrival_rate
+            )
 
         # tecnical parameters
         self.fps = fps
+        self.arrival_rate = arrival_rate
         self.p_idle = power_idle
         self.p_max = power_max
 
@@ -58,10 +62,11 @@ class Agent:
         self.battery_capacity = battery_capacity
         
         # 3d table, |battery_levls| x |time_levels| x |actions|        
-        self.table = np.zeros((battery_bins, time_bins, (int(self.fps) + 1)))
+        self.table = np.zeros((battery_bins, 4, time_bins, (int(self.fps) + 1)))
 
     def choice_action(self, state, eps):
-        b_idx, t_idx = self.state_discretization(state[0], state[1])
+        b_idx, t_idx = self.state_discretization(state[0], state[2])
+        s_idx = int(state[1])
         # b_idx, t_idx = state[0], state[1]
         
         # print(f"Q drop: {self.table[b_idx, t_idx, 0]}, Q process: {self.table[b_idx, t_idx, 1]} - ", end="")
@@ -70,7 +75,7 @@ class Agent:
             return random.randint(0, int(self.fps))
         else:
             # print("DECIDED")
-            return np.argmax(self.table[b_idx, t_idx])
+            return np.argmax(self.table[b_idx, s_idx, t_idx])
         
     def state_discretization(self, b, t):
         battery_idx = int(b * self.battery_bins)
@@ -88,14 +93,17 @@ class Agent:
             self.eps = self.eps_min
 
     def update_table(self, state, next_state, action, reward):
-        b_idx, t_idx = self.state_discretization(state[0], state[1])
-        next_b_idx, next_t_idx = self.state_discretization(next_state[0], next_state[1])
+        b_idx, t_idx = self.state_discretization(state[0], state[2])
+        next_b_idx, next_t_idx = self.state_discretization(next_state[0], next_state[2])
+        
+        s_idx = int(state[1])
+        next_s_idx = int(next_state[1])
         
         # print(f"current_state: [{b_idx}, {t_idx}] - next_state: [{next_b_idx}, {next_t_idx}]")
         # print(f"Q(s', a'): {np.max(self.table[next_b_idx, next_t_idx])} - reward: {reward}")
         
         # print(f"\n State of Q({b_idx}, {t_idx}, {action}): {self.table[b_idx, t_idx, action]} -> ", end="")
-        self.table[b_idx, t_idx, action] = (1 - self.alpha) * self.table[b_idx, t_idx, action] + (self.alpha * (reward + (self.gamma * np.max(self.table[next_b_idx, next_t_idx]))))
+        self.table[b_idx, s_idx, t_idx, action] = (1 - self.alpha) * self.table[b_idx, s_idx, t_idx, action] + (self.alpha * (reward + (self.gamma * np.max(self.table[next_b_idx, next_s_idx, next_t_idx]))))
         # print(f"{self.table[b_idx, t_idx, action]}")
     
     def train(self):
@@ -104,7 +112,7 @@ class Agent:
         
         dropped_frames = []
         processed_frames = []
-        storage = []
+        backlog = []
         stored = []
         daily_backlogs = []
         processed_stored_ratio = []
@@ -128,7 +136,7 @@ class Agent:
             partial_reward = 0
             battery_avg = 0
             avg_irrad = 0
-            storage_temp = 0
+            backlog_temp = 0
             action_avg = 0
             discharge = 0
             
@@ -145,10 +153,13 @@ class Agent:
             self.update_eps()            
 
             for j in range(self.env.max_steps):
-                state = self.state_discretization(state[0], state[1])
+                b, t = self.state_discretization(state[0], state[1])
+                state = b, state[1], t
+                
                 action = self.choice_action(state, self.eps)
 
-                new_state, reward, terminated, truncated, info = self.env.step(action * 5)
+
+                new_state, reward, terminated, truncated, info = self.env.step(action)
 
                 self.update_table(state, new_state, action, reward)
                 partial_reward += reward
@@ -168,7 +179,7 @@ class Agent:
                 # battery.append(info['battery_level'] * self.battery_capacity)
                 battery_avg += (info['battery_level'] * 100)
                 avg_irrad += info['irradiance']
-                storage_temp += info['storage_level']
+                backlog_temp += info['backlog_level']
                 
                 action_avg += (action)
                 action_trace.append(action)
@@ -179,14 +190,14 @@ class Agent:
                     discharge += 1
                     
                 if(episode % int(self.episodes / 10) == 0):
-                    daily_backlog.append(self.env.storage)
+                    daily_backlog.append(self.env.backlog)
                     battery_trace.append(info['battery_level'] * 100)
 
 
                 # input("Press enter to continue...")
             
-            storage_temp /= self.env.max_steps
-            stored.append(storage_temp)
+            backlog_temp /= self.env.max_steps
+            stored.append(backlog_temp)
             
             if(episode % int(self.episodes / 10) == 0):
                 cumulative_traces.append(trace)
@@ -204,10 +215,10 @@ class Agent:
             
             actions.append(action_avg / self.env.max_steps)
             processed_frames.append(info['frames_processed'])
-            storage.append(info['storage_level'])
+            backlog.append(info['backlog_level'])
             
             try:
-                processed_stored_ratio.append(info['frames_processed'] / info['storage_level'])
+                processed_stored_ratio.append(info['frames_processed'] / info['backlog_level'])
             except:
                 processed_stored_ratio.append(0)
                 
@@ -237,10 +248,10 @@ class Agent:
         # self.plot_daily_irradiation(daily_irradiance)
         
         self.plot_battery_violations(discharges)
-        self.plot_storage_daily(daily_backlogs)
-        self.plot_storage(stored)
+        self.plot_backlog_daily(daily_backlogs)
+        self.plot_backlog(stored)
         
-        return rewards, dropped_frames, processed_frames, battery, irradiance, storage
+        return rewards, dropped_frames, processed_frames, battery, irradiance, backlog
 
     ### daily metrics
 
@@ -259,7 +270,7 @@ class Agent:
         plt.savefig(f"cumulative_rewards_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()    
         
-    def plot_storage(self, data):
+    def plot_backlog(self, data):
         window = 10
         plt.title(f"B: {self.battery_capacity}, p_i: {self.p_idle}, p_F: {self.p_max}")
         plt.suptitle("Single agent - Average Backlog")
@@ -456,7 +467,7 @@ class Agent:
         plt.savefig(f"processed_stored_ratio_{self.battery_capacity}Wh_{self.fps}fps_{self.env.day}.pdf")
         plt.close()
         
-    def plot_processed_storage(self, processed, stored):
+    def plot_processed_backlog(self, processed, stored):
         window = 10
         plt.suptitle("Single agent - Frames management")
         plt.title(f"B = {self.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
@@ -475,36 +486,36 @@ class Agent:
         plt.savefig(f"frames_qlt_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
         
-        plt.title("Single agent - Average storage")
+        plt.title("Single agent - Average backlog")
         plt.xlabel("Episodes")
-        plt.ylabel("Storage level")
+        plt.ylabel("backlog level")
 
         plt.plot(range(window - 1, len(stored)), np.convolve(stored, np.ones(window)/window, mode='valid'), label = f"stored", alpha = 1.0)
 
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
         plt.tight_layout()
-        plt.savefig(f"storage_comparison_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
+        plt.savefig(f"backlog_comparison_plot_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
 
-    def plot_storage_daily(self, data):
+    def plot_backlog_daily(self, data):
         window = 10
-        plt.suptitle("Single agent - Daily storage")
+        plt.suptitle("Single agent - Daily backlog")
         plt.title(f"B = {self.battery_capacity}, p_I = {self.p_idle}, p_F = {self.p_max}, fps = {self.env.fps}")
 
         plt.xlabel("Step")
-        plt.ylabel("storage")
+        plt.ylabel("backlog")
         
         for i in range(len(data)):
             plt.plot(range(window - 1, len(data[i])), np.convolve(data[i], np.ones(window)/window, mode='valid'), label = f"{(i * int(self.episodes/10))}-th ep", alpha = 1.0)
 
-            # plt.plot(storage_traces[i], label = f"{str(i * int(self.episodes/10))}-th ep." )
+            # plt.plot(backlog_traces[i], label = f"{str(i * int(self.episodes/10))}-th ep." )
         
         plt.grid()
         plt.legend()
         plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"storage_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
+        plt.savefig(f"backlog_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
 
             
