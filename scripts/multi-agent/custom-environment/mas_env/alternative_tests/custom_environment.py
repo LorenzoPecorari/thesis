@@ -63,7 +63,7 @@ class CustomEnvironment(ParallelEnv):
         
         # internal counters for episode compeltion 
         self.timestep = 0
-        self.max_steps = (3600 / proc_interval) * 5
+        # self.max_steps = (3600 / proc_interval) * 5
         self.episode = 172
         self._w = w
         
@@ -110,8 +110,9 @@ class CustomEnvironment(ParallelEnv):
         qty = self.backlogs[agent_id]
         # max_storage = self._processing_rate * self._proc_interval
         
-        # DA TESTARE VERSIONE CON CAPACITÀ PARI A 10 INTERVALLI
+        # VERSIONE CON CAPACITÀ PARI A 10 INTERVALLI
         max_storage = self._processing_rate * self._proc_interval * 10
+        
         # max_storage = self._processing_rate * self._proc_interval * (3600 / self._proc_interval)
         
         # return 1 - qty/max_storage
@@ -695,6 +696,9 @@ class CustomEnvironment(ParallelEnv):
                 #     ht_gti = self._processing_rate - ft_gti
             
             # --- NEW REWARD FUNCTION ---
+            
+            local_processing = 0
+            offloading_processing = 0
 
             # available enegy as sum of actual battery energy and the one coming from pv
             actual_battery = self.battery_energies[agent_id] + panel_energy

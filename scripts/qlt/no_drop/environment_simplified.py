@@ -143,7 +143,7 @@ class EnergyPVEnv(gymnasium.Env):
             super().reset()
             self.day = seed % 365
         
-        self.battery_level = 0.8
+        self.battery_level = 0.5
         self.storage = 0
         
         self.inner_step = 0
