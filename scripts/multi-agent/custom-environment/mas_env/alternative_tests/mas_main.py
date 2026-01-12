@@ -1,6 +1,8 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+
 from custom_environment import CustomEnvironment
 from tabular_agent import TabularAgent
 
@@ -40,7 +42,8 @@ def test_policy(env, num_episodes):
                                 #    eps_dec=0.99,      # ~  300 episodes
                                 #    eps_dec=0.999,     # ~ 3000 episodes
                                    eps_init=1.0,
-                                   episodes=num_episodes
+                                   episodes=num_episodes,
+                                   day=env.episode
                                    ))
     
     rewards_for_plot = [[] for i in range(0, env._num_agents)]
@@ -199,6 +202,9 @@ def test_policy(env, num_episodes):
         
         print(f"Episode: {episode+1}/{num_episodes} - rewards: {episode_rewards} - framerates: {framerates_to_print}")
         
+    # for agent in range(0, env._num_agents):
+    #     agents[agent].save_table() 
+        
     plot_rewards(rewards_for_plot)
     plot_local_framerate(fs)
     plot_offloading_framerate(hs)
@@ -220,6 +226,32 @@ def test_policy(env, num_episodes):
     plot_recvd_daily(received)
     plot_sent_daily(sent)
     
+    save_results(battery_levels, rewards_for_plot, backlogs_average, num_episodes)
+
+def save_results(batteries, rewards, backlogs, num_episodes):
+    for id in range(0, len(env.possible_agents)):
+        filepath = f"./saved_results/multi-agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_battery.txt"
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        with open(filepath, "w") as file:
+            for elem in batteries[id]:
+                file.write(str(float(elem)) + "\n")
+        
+        filepath = f"./saved_results/multi-agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_rewards.txt"
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        with open(filepath, "w") as file:
+            for elem in rewards[id]:
+                file.write(str(float(elem)) + "\n")
+                
+        filepath = f"./saved_results/multi-agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_backlogs.txt"
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        with open(filepath, "w") as file:
+            for elem in backlogs[id]:
+                file.write(str(float(elem)) + "\n")
+        
+                
 
 def plot_rewards(rewards):
     

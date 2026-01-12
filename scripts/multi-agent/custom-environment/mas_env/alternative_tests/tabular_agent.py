@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import os
+import pickle
 
 class TabularAgent:
     def __init__(self,
@@ -22,7 +24,8 @@ class TabularAgent:
                  eps_min,
                  eps_dec,
                  eps_init,
-                 episodes
+                 episodes,
+                 day
                  ):
         
         self.agent_id = agent_id
@@ -46,6 +49,8 @@ class TabularAgent:
         self.eps_min = eps_min
         self.eps = eps_init
         self.eps_dec = eps_dec
+        
+        self.day = day
 
         action_dims = [self.max_fps + 1, 3, self.num_agents, self.max_fps + 1]
         state_dims = []
@@ -153,3 +158,8 @@ class TabularAgent:
     def update_epsilon(self):
         if(self.eps > self.eps_min):
             self.eps *= self.eps_dec
+            
+    def save_table(self):
+        filepath = f"./saved_tables/single-agent_{int(self.battery_capacity/3600)}Wh_{self.day}_{self.episodes-1}.npy"
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        np.save(filepath, self.table)
