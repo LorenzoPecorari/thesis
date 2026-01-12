@@ -33,9 +33,9 @@ def test_policy(env, num_episodes):
                                    gamma=0.99,
                                    eps_min=0.05,
                                 #    eps_dec=0.839,     # ~ 33 episodes   
-                                   eps_dec=0.9988,      # ~ 2500 episodes
+                                #    eps_dec=0.9988,      # ~ 2500 episodes
                                 #    eps_dec=0.9985,    # ~ 2000 episodes
-                                #    eps_dec=0.997,     # ~ 1000 episodes
+                                   eps_dec=0.997,     # ~ 1000 episodes
                                     # eps_dec=0.9975,     # ~ 1200 episodes
                                 #    eps_dec=0.99,      # ~  300 episodes
                                 #    eps_dec=0.999,     # ~ 3000 episodes
@@ -563,7 +563,7 @@ if __name__ == "__main__":
     arrival_rate = 15
     
     num_agents = 2
-    num_episodes = 4001
+    num_episodes = 2001
 
     power_idle = 2.6
     power_max = 6.0

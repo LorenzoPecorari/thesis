@@ -64,7 +64,7 @@ class CustomEnvironment(ParallelEnv):
         # internal counters for episode compeltion 
         self.timestep = 0
         # self.max_steps = (3600 / proc_interval) * 5
-        self.episode = 172
+        self.episode = 355
         self._w = w
         
         try:
@@ -621,7 +621,7 @@ class CustomEnvironment(ParallelEnv):
         
         # setting to 0 all training variables
         self.timestep = 0
-        self.states = [[0.8, 0, 0.0] for i in range(0, self._num_agents)]
+        self.states = [[0.5, 0, 0.0] for i in range(0, self._num_agents)]
         self.actions = [[0.0, 0, 0.0, 0.0] for i in range(0, self._num_agents)]
         self.battery_energies = [(self.battery_capacities[i] * self.states[i][0]) for i in range(0, self._num_agents)]
         self.backlogs = [0 for i in range(0, self._num_agents)]
@@ -639,7 +639,7 @@ class CustomEnvironment(ParallelEnv):
 
         infos = {a: {} for a in self.agents}
         
-        self.episode = 172
+        self.episode = 355
 
         return observations, infos
         
@@ -1103,7 +1103,7 @@ class CustomEnvironment(ParallelEnv):
         truncations = {a: False for a in self.agents}
         
         if(self.timestep == (self.max_steps - 1)):
-            self.episode = 172
+            self.episode = 355
             truncations = {a: True for a in self.agents}
         
         self.timestep += 1
