@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
+import os
 import random
+
 import environment_simplified
 
 class Agent:
@@ -63,6 +66,7 @@ class Agent:
         
         # 3d table, |battery_levls| x |time_levels| x |actions|        
         self.table = np.zeros((battery_bins, 4, time_bins, (int(self.fps) + 1)))
+        self.filepath = f"./saved_tables/{int(self.battery_capacity)}Wh_{self.env.day}_{self.episodes}.pickle"
 
     def choice_action(self, state, eps):
         b_idx, t_idx = self.state_discretization(state[0], state[2])
@@ -238,6 +242,7 @@ class Agent:
         self.plot_daily_action(action_traces)
         
         self.plot_battery(battery)
+        self.save_results("battery", battery)
         
         # self.plot_daily_energy_consumption(energy_traces)
         
@@ -250,6 +255,9 @@ class Agent:
         self.plot_battery_violations(discharges)
         self.plot_backlog_daily(daily_backlogs)
         self.plot_backlog(stored)
+        
+        self.save_results("backlog", stored)
+        self.save_results("rewards", rewards)
         
         return rewards, dropped_frames, processed_frames, battery, irradiance, backlog
 
@@ -517,7 +525,25 @@ class Agent:
         plt.tight_layout()
         plt.savefig(f"backlog_daily_{self.battery_capacity}Wh_{self.fps}fps_qlt_{self.env.day}.pdf")
         plt.close()
+        
+    def save_table(self):
+        self.filepath = f"./saved_tables/single-agent_{int(self.battery_capacity)}Wh_{self.env.day}_{self.episodes}.pickle"
 
+        os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
+        with open(self.filepath, 'wb') as f:
+            pickle.dump(self.table, f)
+
+    def load_table(self):
+        with open(self.filepath, 'rb') as f:
+            self.table = pickle.load(f)
+            
+    def save_results(self, type, data):
+        filepath = f"./saved_results/single-agent_{int(self.battery_capacity)}Wh_{self.env.day}_{self.episodes}_{type}.txt"
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        with open(filepath, "w") as file:
+            for elem in data:
+                file.write(str(float(elem)) + "\n")
             
     # def save_table(self, episode, battery_bins, time_bins):
     #     array_drop = []

@@ -82,6 +82,7 @@ def multiple_train(num_agents):
 
         results = agent.train()
         rewards.append(results[0])
+        agent.save_table()
 
         # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{int(battery_capacity * max(1, (4 * i)))}Wh", alpha = 1.0)        
         # plt.plot(range(window - 1, len(results[0])), np.convolve(results[0], np.ones(window)/window, mode='valid'), label = f"{backlog_capacity * i / 1000}k ", alpha = 1.0)        
