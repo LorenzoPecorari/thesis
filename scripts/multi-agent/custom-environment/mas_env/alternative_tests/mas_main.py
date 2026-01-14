@@ -74,6 +74,7 @@ def test_policy(env, num_episodes):
         recv_hi = [[] for i in range(0, env._num_agents)]
     
         observations, _ = env.reset()
+        input(observations)
         episode_rewards = {agent: 0 for agent in env.possible_agents}
         step = 0
         
@@ -95,8 +96,6 @@ def test_policy(env, num_episodes):
             
             # print(f"chosen actions: {actions}")
             
-            # print(f"actions: {actions}")
-
             new_observations, rewards, terminations, truncations, infos = env.step(actions)
             # print(f"Observations: {observations}\nRewards: {rewards}\nTerminations:{terminations}\nTruncations: {truncations}\nInfos: {infos}\n")
             # print(f"Observations: {observations}\nNew Observations: {new_observations}")
@@ -594,14 +593,14 @@ if __name__ == "__main__":
     proc_rate = 20
     arrival_rate = 15
     
-    num_agents = 2
+    num_agents = 3
     num_episodes = 2001
 
     power_idle = 2.6
     power_max = 6.0
     
-    batteries = [25, 100]
-    panel_surfaces = [1.0, 0.5]
+    batteries = [25, 100, 50]
+    panel_surfaces = [1.0, 0.5, 0.75]
     
     w = 1
     
@@ -616,6 +615,7 @@ if __name__ == "__main__":
     # ]
     
     irradiance_datapaths = [
+        '../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
         '../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
         '../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
     ]
