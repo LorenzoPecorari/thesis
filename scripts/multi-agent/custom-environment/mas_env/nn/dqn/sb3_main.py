@@ -197,9 +197,7 @@ models = {i : DQN(
           for i in range(0, num_agents)}
 
 for i in range(num_agents):
-    # This initializes the internal _logger and prevents the AttributeError
     models[i].set_logger(configure(None, ["stdout"]))
-    # You also need to initialize the progress remaining for the LR scheduler
     # models[i]._current_progress_remaining = 1.0 
 
 rewards_plot = [[] for agent in range(0, num_agents)]    
