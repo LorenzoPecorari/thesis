@@ -24,7 +24,7 @@ def jit_calculate_reward(
     agent_id,
     w
     ):
-    
+
     # if(fti + hti > processing_rate):
     #     k = processing_rate / (fti + hti)
     #     fti *= k
@@ -72,7 +72,7 @@ def jit_calculate_reward(
     
     if(actual_battery > needed_energy and processable > 0):
         processed = min(fti * proc_interval, processable)
-        local_reward = (processed/processable) * (actual_battery/battery_capacity) * (processed / backlog)
+        local_reward = (processed/processable) + (actual_battery/battery_capacity) + (processed / backlog)
         
         actual_battery = max(actual_battery - needed_energy, 0)
         backlog = max(backlog - processed, 0)
@@ -104,6 +104,10 @@ def jit_calculate_reward(
     remaining_framerate = processing_rate - fti
     
     if(remaining_framerate > 0 and xti != 0):
+        
+        if ft_gti + ht_gti > processing_rate:
+            return local_reward
+        
         if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
             ht = min(hti, ht_gti)
             
@@ -116,7 +120,7 @@ def jit_calculate_reward(
             if(needed_energy <= actual_battery and processable > 0):
                 # actual_battery = max(actual_battery - needed_energy, 0)
                 # backlog = max(backlog - processed, 0)
-                offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog)
+                offloading_reward = (processed/(processable)) + (actual_battery/battery_capacity) + (processed / backlog)
 
                 # if(backlog > 0):
                 #     offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog) 
@@ -147,7 +151,7 @@ def jit_calculate_reward(
             if(needed_energy <= actual_battery and processable > 0):
                 # actual_battery = max(actual_battery - needed_energy, 0)
                 # backlog = max(backlog - processed, 0)
-                offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog)
+                offloading_reward = (processed/(processable)) + (actual_battery/battery_capacity) + (processed / backlog)
 
                 # if(backlog > 0):
                 #     offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog) 

@@ -816,6 +816,9 @@ class CustomEnvironment(ParallelEnv):
             #                         self.backlogs[gti] -= processed
             #                         actual_battery -= needed_energy
 
+            # if(offloading_processing != 0):
+            #     print(f"agent {agent_id} -> fs: {local_processing} - hs: {offloading_processing}")
+
             self.fs[agent_id] += local_processing
             self.hs[agent_id] += offloading_processing
             

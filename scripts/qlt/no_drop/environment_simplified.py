@@ -260,10 +260,10 @@ class EnergyPVEnv(gymnasium.Env):
             # self.total_frames_processed += processed
 
             try:
-                reward = (processed / processable) * (actual / self.battery_capacity) * (processed / backlog)
+                reward = (processed / processable) + (actual / self.battery_capacity) + (processed / backlog)
                 # return processed / processable
             except:
-                reward = (processed / processable) * (actual / self.battery_capacity)
+                reward = (processed / processable) + (actual / self.battery_capacity)
             finally:
                 backlog = new_backlog
         else:
