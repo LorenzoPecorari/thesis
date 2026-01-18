@@ -10,11 +10,11 @@ proc_interval = 1 * 60
 proc_rate = 20
 arrival_rate = 15
 
-num_episodes = 2001
+num_episodes = 4001
 
 eps_init = 1.0
 eps_fin = 0.05
-eps_dec = 0.9975
+eps_dec = 0.9985
 
 num_agents = 2
 battery_capacities = [25, 100]

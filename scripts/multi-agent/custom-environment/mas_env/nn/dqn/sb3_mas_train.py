@@ -173,7 +173,7 @@ class SB3_MAS_Train:
         plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
         
         plt.xlabel("Timesteps")
-        plt.ylabel("Rewards")
+        plt.ylabel("Baclog")
         
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
@@ -256,7 +256,7 @@ class SB3_MAS_Train:
         plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
         
         plt.xlabel("Episodes")
-        plt.ylabel("Rewards")
+        plt.ylabel("Backlog")
         
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
@@ -276,7 +276,7 @@ class SB3_MAS_Train:
         plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
         
         plt.xlabel("Episodes")
-        plt.ylabel("Rewards")
+        plt.ylabel("Backlog")
         
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
@@ -393,19 +393,6 @@ class SB3_MAS_Train:
                         battery_daily_temp[agent_id].append(self.env.battery_energies[agent_id]/ self.env.battery_capacities[agent_id])
                         backlog_daily_temp[agent_id].append(self.env.backlogs[agent_id])
                     
-                    fs[agent_id].append(self.env.fs[agent_id] / self.env.max_steps)
-
-                    if(self.env.hs_counter[agent_id] > 0):
-                        hs[agent_id].append(self.env.hs[agent_id] / self.env.hs_counter[agent_id])
-                    else:
-                        hs[agent_id].append(0.0)
-
-                    self.env.fs[agent_id] = 0
-                    self.env.hs[agent_id] = 0
-                    self.env.hs_counter[agent_id] = 0
-                    
-                    framerates[agent_id].append(fs[agent_id][-1] + hs[agent_id][-1])
-
                     rewards_episode[agent_id] = round(rewards_episode[agent_id], 2)
             
                 obs = next_obs    
@@ -414,6 +401,13 @@ class SB3_MAS_Train:
             print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - epsilon: {self.eps}")
 
             for agent_id in range(0, self.num_agents):            
+                fs[agent_id].append(self.env.fs[agent_id] / self.env.max_steps)
+
+                if(self.env.hs_counter[agent_id] > 0):
+                    hs[agent_id].append(self.env.hs[agent_id] / self.env.hs_counter[agent_id])
+                else:
+                    hs[agent_id].append(0.0)
+                framerates[agent_id].append(fs[agent_id][-1] + hs[agent_id][-1])
                 rewards_plot[agent_id].append(rewards_episode[agent_id]) 
                 batteries[agent_id].append(batteries_local[agent_id] / self.env.max_steps)        
                 backlogs[agent_id].append(backlogs_local[agent_id] / self.env.max_steps)            
@@ -421,8 +415,12 @@ class SB3_MAS_Train:
                 if(i % int(self.num_episodes / 10) == 0):
                     battery_daily[agent_id].append(battery_daily_temp[agent_id])
                     backlogs_daily[agent_id].append(backlog_daily_temp[agent_id])
-                    
-        
+
+
+                self.env.fs[agent_id] = 0
+                self.env.hs[agent_id] = 0
+                self.env.hs_counter[agent_id] = 0
+
                 
         self.plot_rewards(rewards_plot)  
         self.plot_backlogs(backlogs)
