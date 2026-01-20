@@ -83,7 +83,7 @@ def jit_calculate_reward(
         processed = min(fti * proc_interval, processable)
         
         # combination of how good the node can process with such energy and backlog status wrt processed frames
-        local_reward = (processed/processable) * (actual_battery/battery_capacity) * (processed / backlog)
+        local_reward = (processed/processable) + (actual_battery/battery_capacity) + (processed / backlog)
         
         actual_battery = max(actual_battery - needed_energy, 0)
         backlog = max(backlog - processed, 0)
@@ -133,7 +133,7 @@ def jit_calculate_reward(
             if(needed_energy <= actual_battery and processable > 0):
                 # actual_battery = max(actual_battery - needed_energy, 0)
                 # backlog = max(backlog - processed, 0)
-                offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog)
+                offloading_reward = (processed/(processable)) + (actual_battery/battery_capacity) + (processed / backlog)
 
                 # if(backlog > 0):
                 #     offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog) 
@@ -165,7 +165,7 @@ def jit_calculate_reward(
             if(needed_energy <= actual_battery and processable > 0):
                 # actual_battery = max(actual_battery - needed_energy, 0)
                 # backlog = max(backlog - processed, 0)
-                offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog)
+                offloading_reward = (processed/(processable)) + (actual_battery/battery_capacity) + (processed / backlog)
 
                 # if(backlog > 0):
                 #     offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog) 
