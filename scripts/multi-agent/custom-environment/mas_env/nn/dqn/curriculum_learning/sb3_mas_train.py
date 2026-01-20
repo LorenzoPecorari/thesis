@@ -339,6 +339,16 @@ class SB3_MAS_Train:
         total_timesteps = self.num_episodes * self.max_steps
         
         for i in range(0, self.num_episodes):
+            
+            if(i <= int(self.num_episodes / 4)):
+                self.arrival_rate = 5
+            elif(i <= int(self.num_episodes / 2)):
+                self.arrival_rate = 8
+            elif(i <= int(3 * (self.num_episodes / 4))):
+                self.arrival_rate = 12
+            else:
+                self.arrival_rate = 15
+            
             obs = self.env.reset()
             
             rewards_episode = {agent: 0.0 for agent in range(self.num_agents)}
@@ -415,6 +425,7 @@ class SB3_MAS_Train:
                 if(i % int(self.num_episodes / 10) == 0):
                     battery_daily[agent_id].append(battery_daily_temp[agent_id])
                     backlogs_daily[agent_id].append(backlog_daily_temp[agent_id])
+
 
                 self.env.fs[agent_id] = 0
                 self.env.hs[agent_id] = 0
