@@ -27,7 +27,7 @@ panel_surfaces = [1.0, 0.5]
 power_idle = 2.6
 power_max = 6.0
 
-w = 3.0
+w = 1.0
 
 train_freq = 8
 
