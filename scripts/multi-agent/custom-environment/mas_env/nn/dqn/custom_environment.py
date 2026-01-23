@@ -66,7 +66,7 @@ class CustomEnvironment(ParallelEnv):
         # internal counters for episode compeltion 
         self.timestep = 0
         self.max_steps = (3600 / proc_interval) * 5
-        self.episode = 172
+        self.episode = 355
         self._w = w
         
         try:
@@ -429,6 +429,7 @@ class CustomEnvironment(ParallelEnv):
                                    self.panel_surfaces[agent_id],
                                    self.panel_efficiency,
                                    self.backlogs[agent_id],
+                                   self.backlogs[gti],
                                    self.e_idle,
                                    self.e_frame,
                                    self.e_tx_rx,
@@ -636,7 +637,7 @@ class CustomEnvironment(ParallelEnv):
 
         infos = {a: {} for a in self.agents}
         
-        self.episode = 172
+        self.episode = 355
 
         return observations, infos
         
@@ -1091,7 +1092,7 @@ class CustomEnvironment(ParallelEnv):
         truncations = {a: False for a in self.agents}
         
         if(self.timestep == (self.max_steps - 1)):
-            self.episode = 172
+            self.episode = 355
             truncations = {a: True for a in self.agents}
         
         self.timestep += 1

@@ -14,6 +14,7 @@ def jit_calculate_reward(
     panel_area,
     panel_efficiency,
     backlog,
+    backlog_gti,
     e_idle,
     e_frame,
     e_tx_rx,
@@ -108,7 +109,7 @@ def jit_calculate_reward(
         if ft_gti + ht_gti > processing_rate:
             return local_reward
         
-        if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
+        if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0 and backlog_gti == 0):
             ht = min(hti, ht_gti)
             
             # needed_energy = ht * self._proc_interval * self.e_tx_rx
@@ -140,7 +141,7 @@ def jit_calculate_reward(
             #         else:
             #             offloading_reward =  (actual_battery/battery_capacity) * max_backlog
             
-        elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
+        elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0 and backlog == 0):
             ht = min(hti, ht_gti)
             # needed_energy = ht * self._proc_interval * self.e_tx_rx
             processable = max(min(backlog, int((actual_battery - e_idle) / (e_tx_rx + e_frame)), remaining_framerate * proc_interval), 0)
@@ -151,7 +152,7 @@ def jit_calculate_reward(
             if(needed_energy <= actual_battery and processable > 0):
                 # actual_battery = max(actual_battery - needed_energy, 0)
                 # backlog = max(backlog - processed, 0)
-                offloading_reward = (processed/(processable)) + (actual_battery/battery_capacity) + (processed / backlog)
+                offloading_reward = (processed/(processable)) + (actual_battery/battery_capacity)
 
                 # if(backlog > 0):
                 #     offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog) 

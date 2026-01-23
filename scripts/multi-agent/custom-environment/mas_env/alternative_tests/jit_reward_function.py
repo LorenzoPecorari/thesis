@@ -14,6 +14,7 @@ def jit_calculate_reward(
     panel_area,
     panel_efficiency,
     backlog,
+    backlog_gti,
     e_idle,
     e_frame,
     e_tx_rx,
@@ -24,7 +25,7 @@ def jit_calculate_reward(
     agent_id,
     w
     ):
-    
+
     # if(fti + hti > processing_rate):
     #     k = processing_rate / (fti + hti)
     #     fti *= k
@@ -48,41 +49,30 @@ def jit_calculate_reward(
         # else:
         #     ht_gti = processing_rate - ft_gti
     
-    # if combination of framerates exceeds µ_max,
-    # privileges local computation and with the remaining perform offloading
-    
-    # locally 
     if(fti + hti) > processing_rate:
         hti = processing_rate - fti
-    
-    # remotely   
+                
     if(ft_gti + ht_gti) > processing_rate:
         ht_gti = processing_rate - ft_gti
     
     # max_backlog = proc_interval * processing_rate * 10
     
-    # available energy for computation as sum of actual battery energy + energy from pv
     panel_energy = irradiance * panel_area * panel_efficiency * proc_interval
     actual_battery = battery_level + panel_energy
     
-    # processable frames as maximum between zero and the minimum between backlog, what the available energy allows and the processing rate tells 
     processable = max(min(backlog, int((actual_battery - e_idle) / e_frame), processing_rate * proc_interval), 0)    
     # processed = min(processable, fti * proc_interval)
     
     # needed_energy = processed * e_frame + e_idle
     # needed_energy = (fti * proc_interval * e_frame) + e_idle
     
-    # needed energy as the amount determined by the local comp action
     needed_energy = (fti * proc_interval * e_frame) + e_idle
         
     local_reward = 0
     offloading_reward = 0
     
-    # if needed energy is less than the available and the node can process more than zero frames
     if(actual_battery > needed_energy and processable > 0):
         processed = min(fti * proc_interval, processable)
-        
-        # combination of how good the node can process with such energy and backlog status wrt processed frames
         local_reward = (processed/processable) + (actual_battery/battery_capacity) + (processed / backlog)
         
         actual_battery = max(actual_battery - needed_energy, 0)
@@ -94,8 +84,6 @@ def jit_calculate_reward(
         
     else:
         local_reward = 0
-        
-        # if it cannot process nothing and decides to NOT process nothing
         if(processable == 0 and fti == 0):
             local_reward = actual_battery / battery_capacity
             
@@ -113,14 +101,15 @@ def jit_calculate_reward(
                 
     #     actual_battery = max(actual_battery - e_idle, 0)
             
-    # how much framerate it can still use after local computation
+        
     remaining_framerate = processing_rate - fti
     
     if(remaining_framerate > 0 and xti != 0):
         
-        # SENDER mode
-        if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
-            # minimum coming from what local agent tries to ask and what the remote one offers
+        if ft_gti + ht_gti > processing_rate:
+            return local_reward
+        
+        if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0 and backlog_gti == 0):
             ht = min(hti, ht_gti)
             
             # needed_energy = ht * self._proc_interval * self.e_tx_rx
@@ -129,7 +118,6 @@ def jit_calculate_reward(
             processed = min(ht * proc_interval, processable)
             needed_energy = ht * proc_interval * e_tx_rx
             
-            # same reasoning as local computation
             if(needed_energy <= actual_battery and processable > 0):
                 # actual_battery = max(actual_battery - needed_energy, 0)
                 # backlog = max(backlog - processed, 0)
@@ -152,9 +140,8 @@ def jit_calculate_reward(
             #             offloading_reward =  (actual_battery/battery_capacity) * (max_backlog / backlog) 
             #         else:
             #             offloading_reward =  (actual_battery/battery_capacity) * max_backlog
-        
-        # RECEIVER mode
-        elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
+            
+        elif(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0 and backlog == 0):
             ht = min(hti, ht_gti)
             # needed_energy = ht * self._proc_interval * self.e_tx_rx
             processable = max(min(backlog, int((actual_battery - e_idle) / (e_tx_rx + e_frame)), remaining_framerate * proc_interval), 0)
@@ -165,7 +152,7 @@ def jit_calculate_reward(
             if(needed_energy <= actual_battery and processable > 0):
                 # actual_battery = max(actual_battery - needed_energy, 0)
                 # backlog = max(backlog - processed, 0)
-                offloading_reward = (processed/(processable)) + (actual_battery/battery_capacity) + (processed / backlog)
+                offloading_reward = (processed/(processable)) + (actual_battery/battery_capacity)
 
                 # if(backlog > 0):
                 #     offloading_reward = (processed/(processable)) * (actual_battery/battery_capacity) * (processed / backlog) 
@@ -188,7 +175,7 @@ def jit_calculate_reward(
     return local_reward + w * offloading_reward
                         
     # if(actual_battery <= needed_energy):
-    #     return 0
+    #     return 000
         
     # actual_battery = max(actual_battery - needed_energy, 0)
 
