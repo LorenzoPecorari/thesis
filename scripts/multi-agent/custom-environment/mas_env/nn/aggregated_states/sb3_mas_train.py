@@ -246,7 +246,7 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}.pdf")
+        plt.savefig(f"framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
         plt.close()
         
     
@@ -266,7 +266,7 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"local_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}.pdf")
+        plt.savefig(f"local_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
         plt.close()
       
       
@@ -286,7 +286,26 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"offloading_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}.pdf")
+        plt.savefig(f"offloading_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.close()
+        
+    def plot_offloading_matchings(self, fs):
+        window = int(self.num_episodes / 100)
+        plt.suptitle("Multi-agent : average offloading matchings")
+        plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
+        
+        plt.xlabel("Episodes")
+        plt.ylabel("Matchings")
+        
+        for i in range(0, self.env._num_agents):
+            # print(rewards[i])
+            plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
+            # plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+        
+        plt.grid()
+        plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+        plt.tight_layout()
+        plt.savefig(f"offloading_matchings_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
         plt.close()
 
 
@@ -334,8 +353,10 @@ class SB3_MAS_Train:
 
         fs = [[] for i in range(0, self.num_agents)]
         hs = [[] for i in range(0, self.num_agents)]
+        hs_matchings = [[] for agent in range(0, self.num_agents)]
         framerates = [[] for i in range(0, self.num_agents)]
         
+
         total_timesteps = self.num_episodes * self.max_steps
         
         for i in range(0, self.num_episodes):
@@ -411,8 +432,10 @@ class SB3_MAS_Train:
                     hs[agent_id].append(0.0)
                 framerates[agent_id].append(fs[agent_id][-1] + hs[agent_id][-1])
                 rewards_plot[agent_id].append(rewards_episode[agent_id]) 
-                batteries[agent_id].append(batteries_local[agent_id] / self.env.max_steps)        
+                batteries[agent_id].append((batteries_local[agent_id] / self.env.battery_capacities[agent_id]) / self.env.max_steps)        
                 backlogs[agent_id].append(backlogs_local[agent_id] / self.env.max_steps)            
+
+                hs_matchings[agent_id].append(int(self.env.hs_counter[agent_id]))
 
                 if(i % int(self.num_episodes / 10) == 0):
                     battery_daily[agent_id].append(battery_daily_temp[agent_id])
@@ -431,3 +454,4 @@ class SB3_MAS_Train:
         self.plot_framerate(framerates)
         self.plot_local_framerate(fs)
         self.plot_offloading_framerate(hs)
+        self.plot_offloading_matchings(hs_matchings)
