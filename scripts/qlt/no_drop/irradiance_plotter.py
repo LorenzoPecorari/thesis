@@ -42,7 +42,7 @@ def plot_daily_irradiance_timestep(
     print(f"Last step with light: {last_step}")
 
     total_time = len(enlightened_steps) * proc_interval
-    print(f"total time: {total_time}s - total_energy: {total_energy * proc_interval}J/m² - avg_irradiance: {total_energy / len(enlightened_steps)} - total_avg_irradiance: {total_energy / 86400}")
+    print(f"total time: {total_time}s - total_energy: {total_energy * proc_interval}J/m² - avg_irradiance: {total_energy / len(enlightened_steps)} - total_avg_irradiance: {total_energy / len(ghi)}")
                 
     num_ticks = 20
     tick_indices = np.linspace(0, len(timesteps) - 1, num_ticks, dtype=int)
@@ -83,7 +83,7 @@ def plot_daily_irradiance_timestep(
 
 if __name__ == "__main__":
     datapath = '../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
-    day_of_year = 172
+    day_of_year = 355
     delta_time = 15 * 60
     proc_interval = 1 * 60
 

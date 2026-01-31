@@ -286,7 +286,7 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"offloading_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}.pdf")
+        plt.savefig(f"offloading_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
         plt.close()
 
     def plot_offloading_matchings(self, matchings):
