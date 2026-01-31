@@ -21,13 +21,13 @@ eps_dec = 0.9988
 # battery_capacities = [25, 100]
 # panel_surfaces = [1.0, 0.5]
 
-# num_agents = 3
-# battery_capacities = [25, 100, 50]
-# panel_surfaces = [1.0, 0.5, 0.75]
+num_agents = 3
+battery_capacities = [25, 100, 50]
+panel_surfaces = [1.0, 0.5, 0.75]
 
-num_agents = 4
-battery_capacities = [25, 100, 50, 37]
-panel_surfaces = [1.0, 0.5, 0.75, 0.85]
+# num_agents = 4
+# battery_capacities = [25, 100, 50, 37]
+# panel_surfaces = [1.0, 0.5, 0.75, 0.85]
 
 power_idle = 2.6
 power_max = 6.0
