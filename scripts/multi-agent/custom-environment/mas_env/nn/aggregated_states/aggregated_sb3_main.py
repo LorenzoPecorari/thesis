@@ -4,6 +4,7 @@ irradiance_datapaths = [
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
+    '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
     ]
 delta_time = 15 * 60
@@ -27,9 +28,14 @@ eps_dec = 0.9988
 # battery_capacities = [25, 100, 50]
 # panel_surfaces = [1.0, 0.5, 0.75]
 
-num_agents = 4
-battery_capacities = [25, 100, 50, 37]
-panel_surfaces = [1.0, 0.5, 0.75, 0.85]
+# num_agents = 4
+# battery_capacities = [25, 100, 50, 37]
+# panel_surfaces = [1.0, 0.5, 0.75, 0.85]
+
+num_agents = 5
+battery_capacities = [25, 100, 50, 37, 65]
+panel_surfaces = [1.0, 0.5, 0.75, 0.85, 0.65]
+
 
 power_idle = 2.6
 power_max = 6.0
