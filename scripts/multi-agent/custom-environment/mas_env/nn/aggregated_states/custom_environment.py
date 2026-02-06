@@ -319,7 +319,7 @@ class CustomEnvironment(ParallelEnv):
             remaining_framerate = self._processing_rate - fti
             
             if(remaining_framerate > 0 and xti != 0):
-                if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0):
+                if(xti == 1 and gti != agent_id and hti > 0 and xt_gti == 2 and gt_gti == agent_id and ht_gti > 0 and self.backlogs[gti] == 0):
                     ht = min(hti, ht_gti)
                     backlog = self.backlogs[agent_id]
                     
@@ -335,7 +335,7 @@ class CustomEnvironment(ParallelEnv):
                         offloading_processing = processed / self._proc_interval
                         self.hs_counter[agent_id] += 1
             
-                if(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0):
+                if(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0 and backlog == 0) :
                     ht = min(hti, ht_gti)
                     backlog = self.backlogs[gti]
                     

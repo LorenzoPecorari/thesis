@@ -7,6 +7,12 @@ from env_wrapper import EnvWrapper
 import numpy as np
 import matplotlib.pyplot as plt
 
+import torch
+
+import time
+import csv
+import os
+
 class SB3_MAS_Train:
     def __init__(self, 
                  num_agents,
@@ -43,6 +49,9 @@ class SB3_MAS_Train:
         self.w = w
         
         self.train_freq = train_freq
+        self.grad_steps = 1
+        self.batch_size = 16
+        
         self.eps_init = eps_init
         self.eps_dec = eps_dec
         self.eps_fin = eps_fin
@@ -63,17 +72,25 @@ class SB3_MAS_Train:
         
         self.max_steps = self.env.max_steps
         
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+            print(f"CUDA Available: {torch.cuda.get_device_name(0)}")
+        else:
+            self.device = torch.device('cpu')
+            print(f"CUDA NOT Available - using CPU")
+        
+        
         self.models = {i : DQN(
                 policy="MlpPolicy",
                 env=EnvWrapper(self.env, i),
                 learning_rate=0.0001,
-                buffer_size=100000,
+                buffer_size=10000,
                 learning_starts=500,
-                batch_size=64,
+                batch_size=self.batch_size,
                 tau=1.0,
                 gamma=0.99,
-                train_freq=train_freq,
-                gradient_steps=1,
+                train_freq=self.train_freq,
+                gradient_steps=self.grad_steps,
                 replay_buffer_class=None,
                 replay_buffer_kwargs=None,
                 optimize_memory_usage=False,
@@ -88,13 +105,14 @@ class SB3_MAS_Train:
                 policy_kwargs=None,
                 verbose=0,
                 seed=None,
-                device='auto',
+                device='cuda',
                 _init_setup_model=True
             )
           for i in range(0, num_agents)}
         
         for i in range(num_agents):
             self.models[i].set_logger(configure(None, ["stdout"]))
+            print(f"Agent {i} device: {self.models[i].device}")
         
     
     def plot_rewards(self, rewards):
@@ -308,6 +326,64 @@ class SB3_MAS_Train:
         plt.savefig(f"offloading_matchings_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
         plt.close()
 
+    def save_battery_csv(self, battery_daily):
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./csvs/battery_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            
+            with open(filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                
+                if len(battery_daily[agent_id]) > 0 and len(battery_daily[agent_id][0]) > 0:
+                    n_timesteps = len(battery_daily[agent_id][0])
+                    header = [f't{i}' for i in range(n_timesteps)]
+                    writer.writerow(header)
+                    
+                    for episode_data in battery_daily[agent_id]:
+                        writer.writerow(episode_data)
+            
+            print(f"saved: {filename}")
+    
+    def save_backlog_csv(self, backlog_daily):
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./csvs/backlog_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            
+            with open(filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                
+                if len(backlog_daily[agent_id]) > 0 and len(backlog_daily[agent_id][0]) > 0:
+                    n_timesteps = len(backlog_daily[agent_id][0])
+                    header = [f't{i}' for i in range(n_timesteps)]
+                    writer.writerow(header)
+                    
+                    for episode_data in backlog_daily[agent_id]:
+                        writer.writerow(episode_data)
+            
+            print(f"saved: {filename}")
+
+    def save_rewards_csv(self, rewards):
+        os.makedirs('./csvs', exist_ok=True)
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./csvs/rewards_agent_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            
+            with open(filename, "w") as file:
+                for elem in rewards[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+                
+        print(f"saved: {filename}")
+        
+    def save_time_csv(self, times):
+        os.makedirs('./csvs', exist_ok=True)
+        filename = f"./csvs/time_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+
+        with open(filename, "w") as file:
+            for elem in times:
+                file.write(str(float(elem)) + "\n")
+                
+        print(f"saved: {filename}")
+
 
     def decode(self, encoded_action):
         fti = int(encoded_action / (3 * self.num_agents * (self.proc_rate + 1)))
@@ -339,6 +415,70 @@ class SB3_MAS_Train:
         if(self.eps > self.eps_fin):
             self.eps = max(self.eps * self.eps_dec, self.eps_fin)
     
+    def train_with_profiling(self):
+        
+        times = {
+            'action_selection': 0,
+            'env_step': 0,
+            'replay_buffer_add': 0,
+            'model_train': 0,
+            'other': 0
+        }
+        
+        step = 0
+        
+        for i in range(0, self.num_episodes):
+            obs = self.env.reset()[0]
+            
+            while self.env.agents:
+                t1 = time.time()
+                actions_encoded = {}
+                actions = {}
+                for agent_id in range(self.num_agents):
+                    if np.random.random() < self.eps:
+                        action = self.models[agent_id].action_space.sample()
+                    else:
+                        action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
+                    actions_encoded[agent_id] = action
+                    actions[agent_id] = self.decode(action)
+                times['action_selection'] += time.time() - t1
+                
+                t2 = time.time()
+                next_obs, rewards, terminations, truncations, infos = self.env.step(actions)
+                times['env_step'] += time.time() - t2
+                
+                t3 = time.time()
+                for agent_id in range(self.num_agents):
+                    done = terminations[agent_id] or truncations[agent_id]
+                    self.models[agent_id].replay_buffer.add(
+                        obs=obs[agent_id],
+                        next_obs=next_obs[agent_id],
+                        action=np.array([actions_encoded[agent_id]]),
+                        reward=np.array(rewards[agent_id]),
+                        done=np.array([done]),
+                        infos=[{}]
+                    )
+                    self.models[agent_id].num_timesteps += 1
+                times['replay_buffer_add'] += time.time() - t3
+                
+                t4 = time.time()
+                for agent_id in range(self.num_agents):
+                    if (self.models[agent_id].num_timesteps > self.models[agent_id].learning_starts and
+                        self.models[agent_id].num_timesteps % self.train_freq == 0):
+                        self.models[agent_id].train(gradient_steps=self.grad_steps, batch_size=self.batch_size)
+                times['model_train'] += time.time() - t4
+                
+                obs = next_obs
+                step += 1
+            
+            if (i + 1) % 10 == 0:
+                total = sum(times.values())
+                print(f"\n=== Breakdown Episode {i+1} ===")
+                for key, val in times.items():
+                    pct = (val / total * 100) if total > 0 else 0
+                    print(f"{key:20s}: {val:6.2f}s ({pct:5.1f}%)")
+                print(f"{'TOTAL':20s}: {total:6.2f}s")
+    
     def train(self):
         self.eps = self.eps_init
         
@@ -356,10 +496,13 @@ class SB3_MAS_Train:
         hs_matchings = [[] for agent in range(0, self.num_agents)]
         framerates = [[] for i in range(0, self.num_agents)]
         
+        times = []
 
         total_timesteps = self.num_episodes * self.max_steps
         
         for i in range(0, self.num_episodes):
+            temp = time.time()
+            
             obs = self.env.reset()
             
             rewards_episode = {agent: 0.0 for agent in range(self.num_agents)}
@@ -382,8 +525,15 @@ class SB3_MAS_Train:
                 progress_remaining = 1.0 - (current_timestep / total_timesteps)
                 
                 for agent_id in range(0, self.num_agents):
-                    self.models[agent_id]._current_progress_remaining = progress_remaining                    
-                    self.get_action(agent_id, obs[agent_id], actions_encoded, actions)
+                    self.models[agent_id]._current_progress_remaining = progress_remaining     
+                    if(np.random.random() < self.eps):
+                        action = self.models[agent_id].action_space.sample()
+                    else:
+                        action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
+                    
+                    actions_encoded[agent_id] = action
+                    actions[agent_id] = self.decode(action)               
+                    # self.get_action(agent_id, obs[agent_id], actions_encoded, actions)
                 
                 # print(actions)
                 
@@ -410,7 +560,7 @@ class SB3_MAS_Train:
                     
                     if (self.models[agent_id].num_timesteps > self.models[agent_id].learning_starts and
                         self.models[agent_id].num_timesteps % self.train_freq == 0):
-                        self.models[agent_id].train(gradient_steps=1, batch_size=64)
+                        self.models[agent_id].train(gradient_steps=self.grad_steps, batch_size=self.batch_size)
                     
                     if(i % int(self.num_episodes/10) == 0):
                         battery_daily_temp[agent_id].append(self.env.battery_energies[agent_id]/ self.env.battery_capacities[agent_id])
@@ -421,8 +571,10 @@ class SB3_MAS_Train:
                 obs = next_obs    
                 step += 1
                     
-            print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - epsilon: {self.eps}")
-
+            temp = time.time() - temp
+            times.append(temp)
+            print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - eps: {round(self.eps, 2)} - time: {temp}")
+            
             for agent_id in range(0, self.num_agents):            
                 fs[agent_id].append(self.env.fs[agent_id] / self.env.max_steps)
 
@@ -455,3 +607,8 @@ class SB3_MAS_Train:
         self.plot_local_framerate(fs)
         self.plot_offloading_framerate(hs)
         self.plot_offloading_matchings(hs_matchings)
+        
+        self.save_battery_csv(battery_daily)
+        self.save_backlog_csv(backlogs_daily)
+        self.save_rewards_csv(rewards_plot)
+        self.save_time_csv(times)

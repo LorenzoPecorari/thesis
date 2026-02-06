@@ -1,4 +1,6 @@
 from sb3_mas_train import SB3_MAS_Train
+from sb3_mas_train_copy import SB3_MAS_Train_Parallelized
+
 
 irradiance_datapaths = [
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
@@ -28,13 +30,13 @@ eps_dec = 0.9988
 # battery_capacities = [25, 100, 50]
 # panel_surfaces = [1.0, 0.5, 0.75]
 
-# num_agents = 4
-# battery_capacities = [25, 100, 50, 37]
-# panel_surfaces = [1.0, 0.5, 0.75, 0.85]
+num_agents = 4
+battery_capacities = [25, 100, 50, 37]
+panel_surfaces = [1.0, 0.5, 0.75, 0.85]
 
-num_agents = 5
-battery_capacities = [25, 100, 50, 37, 65]
-panel_surfaces = [1.0, 0.5, 0.75, 0.85, 0.65]
+# num_agents = 5
+# battery_capacities = [25, 100, 50, 37, 65]
+# panel_surfaces = [1.0, 0.5, 0.75, 0.85, 0.65]
 
 
 power_idle = 2.6
@@ -45,7 +47,8 @@ w = 1.0
 train_freq = 8
 
 if __name__ == "__main__":
-    trainer = SB3_MAS_Train(
+    trainer = SB3_MAS_Train_Parallelized(
+    # trainer = SB3_MAS_Train(
         num_agents,
         num_episodes,
         irradiance_datapaths,
@@ -64,4 +67,5 @@ if __name__ == "__main__":
         w
         )
     
+    # trainer.train_with_profiling()
     trainer.train()
