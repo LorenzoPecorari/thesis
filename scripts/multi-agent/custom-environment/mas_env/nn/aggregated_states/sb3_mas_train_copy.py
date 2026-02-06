@@ -100,7 +100,7 @@ class SB3_MAS_Train_Parallelized:
                 policy_kwargs=None,
                 verbose=0,
                 seed=None,
-                device='cpu',
+                device='cuda',
                 _init_setup_model=True
             )
           for i in range(0, num_agents)}
