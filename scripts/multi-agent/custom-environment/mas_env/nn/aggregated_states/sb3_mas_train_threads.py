@@ -14,7 +14,7 @@ import time
 import csv
 import os
 
-class SB3_MAS_Train_Parallelized:
+class SB3_MAS_Train_Parallelized_Threads:
     def __init__(self, 
                  num_agents,
                  num_episodes,
@@ -70,10 +70,10 @@ class SB3_MAS_Train_Parallelized:
         
         self.max_steps = self.env.max_steps
         
-        # self._max_workers = min(self.num_agents, mp.cpu_count())
-        # self.executor = ThreadPoolExecutor(max_workers= self._max_workers)
+        self._max_workers = min(self.num_agents, mp.cpu_count())
+        self.executor = ThreadPoolExecutor(max_workers= self._max_workers)
 
-        self.executor = ThreadPoolExecutor(max_workers= self.num_agents)
+        # self.executor = ThreadPoolExecutor(max_workers= self.num_agents)
         
         self.models = {i : DQN(
                 policy="MlpPolicy",
@@ -376,7 +376,7 @@ class SB3_MAS_Train_Parallelized:
         # plt.ylim(-10, 500)
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"rewards_plot_{self.num_episodes - 1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+        plt.savefig(f"rewards_plot_{self.num_episodes - 1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_threads.pdf")
         plt.close()
 
     
@@ -396,7 +396,7 @@ class SB3_MAS_Train_Parallelized:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"avg_battery_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+        plt.savefig(f"avg_battery_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_threads.pdf")
         plt.close()
 
 
@@ -422,7 +422,7 @@ class SB3_MAS_Train_Parallelized:
             plt.grid()
             plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
             plt.tight_layout()
-            plt.savefig(f"avg_battery_plot_{self.battery_capacities[i]}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+            plt.savefig(f"avg_battery_plot_{self.battery_capacities[i]}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_threads.pdf")
             plt.close()
 
     
@@ -443,7 +443,7 @@ class SB3_MAS_Train_Parallelized:
         # plt.legend()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"backlog_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+        plt.savefig(f"backlog_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_threads.pdf")
         plt.close()
 
     
@@ -463,7 +463,7 @@ class SB3_MAS_Train_Parallelized:
             plt.grid()
             plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
             plt.tight_layout()
-            plt.savefig(f"battery_{int(self.env.battery_capacities[elem] / 3600)}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+            plt.savefig(f"battery_{int(self.env.battery_capacities[elem] / 3600)}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_threads.pdf")
             plt.close()
             
     
@@ -485,7 +485,7 @@ class SB3_MAS_Train_Parallelized:
             # plt.legend()
             plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
             plt.tight_layout()
-            plt.savefig(f"backlog_{int(self.env.battery_capacities[elem] / 3600)}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+            plt.savefig(f"backlog_{int(self.env.battery_capacities[elem] / 3600)}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_threads.pdf")
             plt.close()        
 
     
@@ -505,7 +505,7 @@ class SB3_MAS_Train_Parallelized:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.savefig(f"framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents_threads.pdf")
         plt.close()
         
     
@@ -525,7 +525,7 @@ class SB3_MAS_Train_Parallelized:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"local_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.savefig(f"local_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents_threads.pdf")
         plt.close()
       
       
@@ -545,7 +545,7 @@ class SB3_MAS_Train_Parallelized:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"offloading_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.savefig(f"offloading_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents_threads.pdf")
         plt.close()
         
     def plot_offloading_matchings(self, fs):
@@ -564,13 +564,13 @@ class SB3_MAS_Train_Parallelized:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"offloading_matchings_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.savefig(f"offloading_matchings_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents_threads.pdf")
         plt.close()
 
     def save_battery_csv(self, battery_daily):
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/parallelized_battery_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            filename = f"./csvs/parallelized_battery_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_threads.csv"
             
             with open(filename, 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -588,7 +588,7 @@ class SB3_MAS_Train_Parallelized:
     def save_backlog_csv(self, backlog_daily):
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/parallelized_backlog_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            filename = f"./csvs/parallelized_backlog_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_threads.csv"
             
             with open(filename, 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -607,7 +607,7 @@ class SB3_MAS_Train_Parallelized:
         os.makedirs('./csvs', exist_ok=True)
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/parallelized_rewards_agent_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            filename = f"./csvs/parallelized_rewards_agent_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_threads.csv"
             
             with open(filename, "w") as file:
                 for elem in rewards[agent_id]:
@@ -617,7 +617,7 @@ class SB3_MAS_Train_Parallelized:
         
     def save_time_csv(self, times):
         os.makedirs('./csvs', exist_ok=True)
-        filename = f"./csvs/parallelized_time_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+        filename = f"./csvs/parallelized_time_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_threads.csv"
 
         with open(filename, "w") as file:
             for elem in times:
