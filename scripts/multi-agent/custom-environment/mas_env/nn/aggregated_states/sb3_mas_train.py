@@ -30,7 +30,8 @@ class SB3_MAS_Train:
                  power_idle,
                  power_max,
                  train_freq,
-                 w
+                 w,
+                 mode
                 ):
         
         self.num_agents = num_agents
@@ -47,6 +48,7 @@ class SB3_MAS_Train:
         self.power_max = power_max
         
         self.w = w
+        self.mode = mode
         
         self.train_freq = train_freq
         self.grad_steps = 1
@@ -105,7 +107,7 @@ class SB3_MAS_Train:
                 policy_kwargs=None,
                 verbose=0,
                 seed=None,
-                device='cuda',
+                device=mode,
                 _init_setup_model=True
             )
           for i in range(0, num_agents)}
@@ -135,7 +137,7 @@ class SB3_MAS_Train:
         # plt.ylim(-10, 500)
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"rewards_plot_{self.num_episodes - 1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+        plt.savefig(f"rewards_plot_{self.num_episodes - 1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_{self.mode}.pdf")
         plt.close()
 
     
@@ -155,7 +157,7 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"avg_battery_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+        plt.savefig(f"avg_battery_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_{self.mode}.pdf")
         plt.close()
 
 
@@ -181,7 +183,7 @@ class SB3_MAS_Train:
             plt.grid()
             plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
             plt.tight_layout()
-            plt.savefig(f"avg_battery_plot_{self.battery_capacities[i]}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+            plt.savefig(f"avg_battery_plot_{self.battery_capacities[i]}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_{self.mode}.pdf")
             plt.close()
 
     
@@ -202,7 +204,7 @@ class SB3_MAS_Train:
         # plt.legend()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"backlog_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+        plt.savefig(f"backlog_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_{self.mode}.pdf")
         plt.close()
 
     
@@ -222,7 +224,7 @@ class SB3_MAS_Train:
             plt.grid()
             plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
             plt.tight_layout()
-            plt.savefig(f"battery_{int(self.env.battery_capacities[elem] / 3600)}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+            plt.savefig(f"battery_{int(self.env.battery_capacities[elem] / 3600)}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_{self.mode}.pdf")
             plt.close()
             
     
@@ -244,7 +246,7 @@ class SB3_MAS_Train:
             # plt.legend()
             plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
             plt.tight_layout()
-            plt.savefig(f"backlog_{int(self.env.battery_capacities[elem] / 3600)}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
+            plt.savefig(f"backlog_{int(self.env.battery_capacities[elem] / 3600)}Wh_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents_{self.mode}.pdf")
             plt.close()        
 
     
@@ -264,7 +266,7 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.savefig(f"framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents_{self.mode}.pdf")
         plt.close()
         
     
@@ -284,7 +286,7 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"local_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.savefig(f"local_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents_{self.mode}.pdf")
         plt.close()
       
       
@@ -304,7 +306,7 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"offloading_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.savefig(f"offloading_framerate_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents_{self.mode}.pdf")
         plt.close()
         
     def plot_offloading_matchings(self, fs):
@@ -323,13 +325,13 @@ class SB3_MAS_Train:
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
         plt.tight_layout()
-        plt.savefig(f"offloading_matchings_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents.pdf")
+        plt.savefig(f"offloading_matchings_plot_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.env._num_agents}agents_{self.mode}.pdf")
         plt.close()
 
     def save_battery_csv(self, battery_daily):
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/battery_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            filename = f"./csvs/battery_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
             
             with open(filename, 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -347,7 +349,7 @@ class SB3_MAS_Train:
     def save_backlog_csv(self, backlog_daily):
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/backlog_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            filename = f"./csvs/backlog_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
             
             with open(filename, 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -366,7 +368,7 @@ class SB3_MAS_Train:
         os.makedirs('./csvs', exist_ok=True)
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/rewards_agent_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+            filename = f"./csvs/rewards_agent_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
             
             with open(filename, "w") as file:
                 for elem in rewards[agent_id]:
@@ -376,7 +378,7 @@ class SB3_MAS_Train:
         
     def save_time_csv(self, times):
         os.makedirs('./csvs', exist_ok=True)
-        filename = f"./csvs/time_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents.csv"
+        filename = f"./csvs/time_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
 
         with open(filename, "w") as file:
             for elem in times:
@@ -573,6 +575,7 @@ class SB3_MAS_Train:
                     
             temp = time.time() - temp
             times.append(temp)
+        
             print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - eps: {round(self.eps, 2)} - time: {temp}")
             
             for agent_id in range(0, self.num_agents):            
