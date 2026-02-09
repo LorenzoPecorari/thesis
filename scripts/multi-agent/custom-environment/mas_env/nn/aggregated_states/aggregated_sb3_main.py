@@ -71,7 +71,7 @@ if __name__ == "__main__":
         )
     
     # trainer.train_with_profiling()
-    trainer1.train()
+    # trainer1.train()
 
     trainer2 = SB3_MAS_Train_Parallelized_Threads(
         num_agents,

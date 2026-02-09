@@ -318,8 +318,10 @@ class SB3_MAS_Train_Parallelized_Threads:
 
             temp = time.time() - temp   
             times.append(temp)                 
-            print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - epsilon: {round(self.eps, 2)} - avg_time = {temp}")
-
+            
+            # if(i % int(100) == 0):
+            print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - eps: {round(self.eps, 2)} - time: {temp}")
+            
             for agent_id in range(0, self.num_agents):            
                 fs[agent_id].append(self.env.fs[agent_id] / self.env.max_steps)
 
