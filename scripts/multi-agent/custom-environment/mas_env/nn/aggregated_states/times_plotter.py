@@ -86,4 +86,105 @@ def main(episodes, day, interval, num_agents, mode):
     plt.close()
 
 
-main(4000, 355, 600, 5, "cuda")
+def cpu_vs_gpu(episodes, day, interval, num_agents, mode):
+    
+    cpu_local = 0
+    cpu_vector = []
+    cpu_vector_single = []
+    
+    gpu_local = 0
+    gpu_vector = []
+    gpu_vector_single = []
+    
+    if(mode == "parallelized_threads"):
+        with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_threads_cpu.csv') as file:
+            csvFile = csv.reader(file)
+            for line in csvFile:
+                cpu_vector_single.append(float(line[0]))
+                cpu_local += float(line[0])
+                cpu_vector.append(cpu_local)
+        
+        
+        with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_threads_cuda.csv') as file:
+            csvFile = csv.reader(file)
+            for line in csvFile:
+                gpu_vector_single.append(float(line[0]))
+                gpu_local += float(line[0])
+                gpu_vector.append(gpu_local)
+    elif(mode == "parallelized_processes"):
+        with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_processes_cpu.csv') as file:
+            csvFile = csv.reader(file)
+            for line in csvFile:
+                cpu_vector_single.append(float(line[0]))
+                cpu_local += float(line[0])
+                cpu_vector.append(cpu_local)
+        
+        
+        with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_processes_cuda.csv') as file:
+            csvFile = csv.reader(file)
+            for line in csvFile:
+                gpu_vector_single.append(float(line[0]))
+                gpu_local += float(line[0])
+                gpu_vector.append(gpu_local)
+    else:
+        with open(f'./csvs/time_{episodes}_{day}_{interval}_{num_agents}agents_cpu.csv') as file:
+            csvFile = csv.reader(file)
+            for line in csvFile:
+                cpu_vector_single.append(float(line[0]))
+                cpu_local += float(line[0])
+                cpu_vector.append(cpu_local)
+        
+        
+        with open(f'./csvs/time_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
+            csvFile = csv.reader(file)
+            for line in csvFile:
+                gpu_vector_single.append(float(line[0]))
+                gpu_local += float(line[0])
+                gpu_vector.append(gpu_local)
+        
+    window = 10
+    plt.suptitle("Total time taken by execution comparison")
+    plt.title(f"Episodes: {episodes}, Day: {day}, Interval: {interval}, num_agents: {num_agents}, Mode: {mode}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Time [s]")
+    
+    if(mode == "parallelized_"):
+        mode = "parallelized"
+    elif(mode == ""):
+        mode = "sequential"
+        
+    print("mode: ", mode == "")
+    
+    # plt.plot(range(window - 1, len(levels[i])), np.convolve(levels[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
+    plt.plot(range(window - 1, len(cpu_vector)), np.convolve(cpu_vector, np.ones(window)/window, mode='valid'), label = f"{mode} - cpu", alpha = 1.0, color = "blue")
+    plt.plot(range(window - 1, len(gpu_vector)), np.convolve(gpu_vector, np.ones(window)/window, mode='valid'), label = f"{mode} - cuda", alpha = 1.0, color = "red")
+
+    # plt.plot(non_parallelized_vector_single, label = f"Non parallelized", alpha = 0.8)
+    # plt.plot(parallelized_vector_single, label = f"Parallelized - threads", alpha = 0.8)
+    # plt.plot(process_parallelized_vector_single, label = f"Parallelized - processes", alpha = 0.8)
+    
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"time_comparison_{episodes}_{day}_{interval}_{num_agents}agents_{mode}.pdf")
+    plt.close()
+
+    plt.suptitle("Time taken per episode comparison")
+    plt.title(f"Episodes: {episodes}, Day: {day}, Interval: {interval}, num_agents: {num_agents}, Mode: {mode}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Time [s]")
+    
+    plt.plot(range(window - 1, len(cpu_vector_single)), np.convolve(cpu_vector_single, np.ones(window)/window, mode='valid'), label = f"{mode} - cpu", alpha = 1.0, color = "blue")
+    plt.plot(range(window - 1, len(gpu_vector_single)), np.convolve(gpu_vector_single, np.ones(window)/window, mode='valid'), label = f"{mode} - gpu", alpha = 1.0, color = "red")
+    
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"time_comparison_episode_{episodes}_{day}_{interval}_{num_agents}agents_{mode}.pdf")
+    plt.close()
+
+
+# main(4000, 355, 60, 5, "cpu")
+cpu_vs_gpu(4000, 355, 60, 5, "sequential")
