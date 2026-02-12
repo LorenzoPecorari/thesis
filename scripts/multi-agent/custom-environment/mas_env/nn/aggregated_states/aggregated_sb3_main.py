@@ -20,7 +20,7 @@ num_episodes = 4001
 eps_init = 1.0
 eps_fin = 0.05
 # eps_dec = 0.999
-eps_dec = 0.9988
+eps_dec = 0.9985
 
 # num_agents = 2
 # battery_capacities = [25, 100]
@@ -45,9 +45,10 @@ power_max = 6.0
 
 w = 1.0
 
-train_freq = 8
+train_freq = 16
+batch_size = 128
 
-mode = 'cpu'
+mode = 'cuda'
 
 if __name__ == "__main__":
     trainer1 = SB3_MAS_Train(
@@ -67,7 +68,8 @@ if __name__ == "__main__":
         power_max,
         train_freq,
         w,
-        mode
+        mode,
+        batch_size
         )
     
     # trainer.train_with_profiling()
@@ -89,7 +91,8 @@ if __name__ == "__main__":
         power_max,
         train_freq,
         w,
-        mode
+        mode,
+        batch_size
         )
     
     # trainer.train_with_profiling()
@@ -111,7 +114,8 @@ if __name__ == "__main__":
         power_max,
         train_freq,
         w,
-        mode
+        mode,
+        batch_size
         )
     
     # # trainer.train_with_profiling()

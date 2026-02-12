@@ -32,7 +32,8 @@ class SB3_MAS_Train_Parallelized_Processes:
                  power_max,
                  train_freq,
                  w,
-                 mode
+                 mode,
+                 batch_size
                 ):
         
         self.num_agents = num_agents
@@ -50,6 +51,7 @@ class SB3_MAS_Train_Parallelized_Processes:
         
         self.w = w
         self.mode = mode
+        self.batch_size = batch_size
         
         self.train_freq = train_freq
         self.eps_init = eps_init
@@ -83,11 +85,11 @@ class SB3_MAS_Train_Parallelized_Processes:
                 learning_rate=0.0001,
                 buffer_size=100000,
                 learning_starts=500,
-                batch_size=64,
+                batch_size=self.batch_size,
                 tau=1.0,
                 gamma=0.99,
-                train_freq=8,
-                gradient_steps=8,
+                train_freq=self.train_freq,
+                gradient_steps=self.train_freq,
                 replay_buffer_class=None,
                 replay_buffer_kwargs=None,
                 optimize_memory_usage=False,
@@ -576,7 +578,7 @@ class SB3_MAS_Train_Parallelized_Processes:
     def save_battery_csv(self, battery_daily):
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/parallelized_battery_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_processes_{self.mode}.csv"
+            filename = f"./csvs/csvs_batch_{self.batch_size}/parallelized_battery_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_processes_{self.mode}.csv"
             
             with open(filename, 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -594,7 +596,7 @@ class SB3_MAS_Train_Parallelized_Processes:
     def save_backlog_csv(self, backlog_daily):
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/parallelized_backlog_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_processes_{self.mode}.csv"
+            filename = f"./csvs/csvs_batch_{self.batch_size}/parallelized_backlog_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_processes_{self.mode}.csv"
             
             with open(filename, 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -610,10 +612,10 @@ class SB3_MAS_Train_Parallelized_Processes:
             print(f"saved: {filename}")
 
     def save_rewards_csv(self, rewards):
-        os.makedirs('./csvs', exist_ok=True)
+        os.makedirs('./csvs/csvs_batch_{self.batch_size}', exist_ok=True)
         
         for agent_id in range(self.num_agents):
-            filename = f"./csvs/parallelized_rewards_agent_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_processes_{self.mode}.csv"
+            filename = f"./csvs/csvs_batch_{self.batch_size}/parallelized_rewards_agent_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_processes_{self.mode}.csv"
             
             with open(filename, "w") as file:
                 for elem in rewards[agent_id]:
@@ -622,8 +624,8 @@ class SB3_MAS_Train_Parallelized_Processes:
         print(f"saved: {filename}")
         
     def save_time_csv(self, times):
-        os.makedirs('./csvs', exist_ok=True)
-        filename = f"./csvs/parallelized_time_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_processes_{self.mode}.csv"
+        os.makedirs('./csvs/csvs_batch_{self.batch_size}', exist_ok=True)
+        filename = f"./csvs/csvs_batch_{self.batch_size}/parallelized_time_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_processes_{self.mode}.csv"
 
         with open(filename, "w") as file:
             for elem in times:

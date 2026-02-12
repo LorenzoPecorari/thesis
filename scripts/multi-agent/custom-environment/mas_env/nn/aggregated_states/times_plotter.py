@@ -16,21 +16,21 @@ def main(episodes, day, interval, num_agents, mode):
     process_parallelized_vector = []
     process_parallelized_vector_single = []
     
-    with open(f'./csvs/time_{episodes}_{day}_{interval}_{num_agents}agents_{mode}.csv') as file:
+    with open(f'./csvs/csvs_batch_128/time_{episodes}_{day}_{interval}_{num_agents}agents_{mode}.csv') as file:
         csvFile = csv.reader(file)
         for line in csvFile:
             non_parallelized_vector_single.append(float(line[0]))
             non_parallelized_local += float(line[0])
             non_parallelized_vector.append(non_parallelized_local)
             
-    with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_threads_{mode}.csv') as file:
+    with open(f'./csvs/csvs_batch_128/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_threads_{mode}.csv') as file:
         csvFile = csv.reader(file)
         for line in csvFile:
             parallelized_vector_single.append(float(line[0]))
             parallelized_local += float(line[0])
             parallelized_vector.append(parallelized_local)
      
-    with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_processes_{mode}.csv') as file:
+    with open(f'./csvs/csvs_batch_128/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_processes_{mode}.csv') as file:
         csvFile = csv.reader(file)
         for line in csvFile:
             process_parallelized_vector_single.append(float(line[0]))
@@ -97,7 +97,7 @@ def cpu_vs_gpu(episodes, day, interval, num_agents, mode):
     gpu_vector_single = []
     
     if(mode == "parallelized_threads"):
-        with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_threads_cpu.csv') as file:
+        with open(f'./csvs/csvs_batch_128/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_threads_cpu.csv') as file:
             csvFile = csv.reader(file)
             for line in csvFile:
                 cpu_vector_single.append(float(line[0]))
@@ -105,14 +105,14 @@ def cpu_vs_gpu(episodes, day, interval, num_agents, mode):
                 cpu_vector.append(cpu_local)
         
         
-        with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_threads_cuda.csv') as file:
+        with open(f'./csvs/csvs_batch_128/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_threads_cuda.csv') as file:
             csvFile = csv.reader(file)
             for line in csvFile:
                 gpu_vector_single.append(float(line[0]))
                 gpu_local += float(line[0])
                 gpu_vector.append(gpu_local)
     elif(mode == "parallelized_processes"):
-        with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_processes_cpu.csv') as file:
+        with open(f'./csvs/csvs_batch_128/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_processes_cpu.csv') as file:
             csvFile = csv.reader(file)
             for line in csvFile:
                 cpu_vector_single.append(float(line[0]))
@@ -120,14 +120,14 @@ def cpu_vs_gpu(episodes, day, interval, num_agents, mode):
                 cpu_vector.append(cpu_local)
         
         
-        with open(f'./csvs/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_processes_cuda.csv') as file:
+        with open(f'./csvs/csvs_batch_128/parallelized_time_{episodes}_{day}_{interval}_{num_agents}agents_processes_cuda.csv') as file:
             csvFile = csv.reader(file)
             for line in csvFile:
                 gpu_vector_single.append(float(line[0]))
                 gpu_local += float(line[0])
                 gpu_vector.append(gpu_local)
     else:
-        with open(f'./csvs/time_{episodes}_{day}_{interval}_{num_agents}agents_cpu.csv') as file:
+        with open(f'./csvs/csvs_batch_128/time_{episodes}_{day}_{interval}_{num_agents}agents_cpu.csv') as file:
             csvFile = csv.reader(file)
             for line in csvFile:
                 cpu_vector_single.append(float(line[0]))
@@ -135,7 +135,7 @@ def cpu_vs_gpu(episodes, day, interval, num_agents, mode):
                 cpu_vector.append(cpu_local)
         
         
-        with open(f'./csvs/time_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
+        with open(f'./csvs/csvs_batch_128/time_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
             csvFile = csv.reader(file)
             for line in csvFile:
                 gpu_vector_single.append(float(line[0]))
@@ -186,5 +186,5 @@ def cpu_vs_gpu(episodes, day, interval, num_agents, mode):
     plt.close()
 
 
-# main(4000, 355, 60, 5, "cpu")
-cpu_vs_gpu(4000, 355, 60, 5, "sequential")
+main(4000, 355, 60, 5, "cuda")
+# cpu_vs_gpu(4000, 355, 60, 5, "sequential")
