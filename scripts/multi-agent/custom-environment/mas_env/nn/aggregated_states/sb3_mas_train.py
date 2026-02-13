@@ -302,7 +302,7 @@ class SB3_MAS_Train:
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
             plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            # plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
@@ -317,6 +317,7 @@ class SB3_MAS_Train:
         
         plt.xlabel("Episodes")
         plt.ylabel("Matchings")
+        plt.ylim(0, 10)
         
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
