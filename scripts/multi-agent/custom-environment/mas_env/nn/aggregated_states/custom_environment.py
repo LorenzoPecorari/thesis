@@ -347,7 +347,7 @@ class CustomEnvironment(ParallelEnv):
             
             if actual_battery > needed_energy and processable > 0:
                 processed = min(processable, fti * self._proc_interval)
-                backlog = max(backlog - processed, 0)  # Update locale
+                backlog = max(backlog - processed, 0)
                 actual_battery = max(actual_battery - needed_energy, 0)
                 local_processing = processed / self._proc_interval
             else:
@@ -406,7 +406,7 @@ class CustomEnvironment(ParallelEnv):
                 
                 if(xti == 2 and gti != agent_id and hti > 0 and xt_gti == 1 and gt_gti == agent_id and ht_gti > 0 and self.backlogs[agent_id] <= (self._arrival_rate * self._proc_interval)):
                     ht = min(hti, ht_gti)
-                    backlog = self.backlogs[gti]  # Backlog del SENDER
+                    backlog = self.backlogs[gti]
                     
                     processable = max(min(backlog, int((actual_battery - self.e_idle) / (self.e_tx_rx + self.e_frame)), remaining_framerate * self._proc_interval), 0)
                     processed = min(ht * self._proc_interval, processable)
