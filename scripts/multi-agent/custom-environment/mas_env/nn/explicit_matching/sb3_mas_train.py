@@ -317,7 +317,7 @@ class SB3_MAS_Train:
         
         plt.xlabel("Episodes")
         plt.ylabel("Matchings")
-        plt.ylim(0, 10)
+        # plt.ylim(0, 10)
         
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
@@ -388,6 +388,40 @@ class SB3_MAS_Train:
                 
         print(f"saved: {filename}")
 
+    def save_framerate_csv(self, fs, hs, framerates):
+        os.makedirs(f'./csvs/csvs_batch_{self.batch_size}', exist_ok=True)
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./csvs/csvs_batch_{self.batch_size}/local_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in fs[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+
+                print(f"saved: {filename}")
+
+            
+            filename = f"./csvs/csvs_batch_{self.batch_size}/offloading_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in hs[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+                print(f"saved: {filename}")
+
+            
+            filename = f"./csvs/csvs_batch_{self.batch_size}/total_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in framerates[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+                print(f"saved: {filename}")
+        
+    def save_offloading_matchings_csv(self, hs_matchings):
+        os.makedirs(f'./csvs/csvs_batch_{self.batch_size}', exist_ok=True)
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./csvs/csvs_batch_{self.batch_size}/matchings_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in hs_matchings[agent_id]:
+                    file.write(str(int(elem)) + "\n")
+                print(f"saved: {filename}")
 
     def decode(self, encoded_action):
         fti = int(encoded_action / (3 * self.num_agents * (self.proc_rate + 1)))
@@ -660,3 +694,5 @@ class SB3_MAS_Train:
         self.save_backlog_csv(backlogs_daily)
         self.save_rewards_csv(rewards_plot)
         self.save_time_csv(times)
+        self.save_framerate_csv(fs, hs, framerates)
+        self.save_offloading_matchings_csv(hs_matchings)
