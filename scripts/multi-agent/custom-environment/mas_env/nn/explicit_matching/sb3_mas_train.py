@@ -272,7 +272,7 @@ class SB3_MAS_Train:
         
     
     def plot_local_framerate(self, fs):
-        window = 10
+        window = int(self.num_episodes / 100)
         plt.suptitle("Multi-agent : local average framerate")
         plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
         
@@ -292,7 +292,7 @@ class SB3_MAS_Train:
       
       
     def plot_offloading_framerate(self, fs):
-        window = 10
+        window = int(self.num_episodes / 100)
         plt.suptitle("Multi-agent : offloading average framerate")
         plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
         

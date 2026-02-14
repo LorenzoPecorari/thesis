@@ -102,7 +102,9 @@ class CustomEnvironment(ParallelEnv):
         self.fs = [0 for i in range(0, self._num_agents)]
         self.hs = [0 for i in range(0, self._num_agents)]
         self.hs_counter = [0 for i in range(0, self.num_agents)]
-        self.matches = [0 for i in range(0, self.num_agents)]
+        
+        self.last_matches = [0 for i in range(0, self.num_agents)]
+        self.current_matches = [0 for i in range(0, self.num_agents)]
         
         # self.r_battery = [0 for i in range(0, self._num_agents)]
         # self.r_frames = [0 for i in range(0, self._num_agents)]
@@ -268,6 +270,9 @@ class CustomEnvironment(ParallelEnv):
         self.fs = [0 for i in range(0, self._num_agents)]
         self.hs = [0 for i in range(0, self._num_agents)]
         self.hs_counter = [0 for i in range(0, self._num_agents)]
+        
+        self.last_matches = [0 for i in range(0, self.num_agents)]
+        self.current_matches = [0 for i in range(0, self.num_agents)]
 
         observations = {}
         
@@ -314,7 +319,7 @@ class CustomEnvironment(ParallelEnv):
             obs.append(min_backlog)
             obs.append(avg_backlog)
             obs.append(max_backlog)
-            obs.append(0)        
+            obs.append(self.last_matches[agent])        
             
             observations[agent] = obs
             # print(observations[agent])
@@ -368,10 +373,10 @@ class CustomEnvironment(ParallelEnv):
             self.backlogs[agent_id] = local_states[agent_id]['backlog']
         
     def update_states_offloading(self):
-        
-        self.matches = [0 for i in range(0, self.num_agents)]
 
-        
+        self.last_matches = self.current_matches        
+        self.current_matches = [0 for i in range(0, self.num_agents)]
+
         for agent_id in range(0, self._num_agents):
             fti = self.actions[agent_id][0]
             xti = self.actions[agent_id][1]
@@ -404,8 +409,8 @@ class CustomEnvironment(ParallelEnv):
                     needed_energy = ht * self.e_tx_rx * self._proc_interval
                     
                     if(needed_energy <= actual_battery and processable > 0):
-                        self.matches[agent_id] = 1
-                        self.matches[gti] = 1
+                        self.current_matches[agent_id] = 1
+                        self.current_matches[gti] = 1
                         
                         self.backlogs[agent_id] = max(backlog - processed, 0)
                         actual_battery = max(actual_battery - needed_energy, 0)
@@ -421,8 +426,8 @@ class CustomEnvironment(ParallelEnv):
                     needed_energy = ht * (self.e_tx_rx + self.e_frame) * self._proc_interval
                     
                     if(needed_energy <= actual_battery and processable > 0):
-                        self.matches[agent_id] = 1
-                        self.matches[gti] = 1
+                        self.current_matches[agent_id] = 1
+                        self.current_matches[gti] = 1
                         
                         actual_battery = max(actual_battery - needed_energy, 0)
                         offloading_processing = processed / self._proc_interval
@@ -513,7 +518,7 @@ class CustomEnvironment(ParallelEnv):
             obs[7] = avg_backlog
             obs[8] = max_backlog
             
-            obs[9] = self.matches[agent_id]        
+            obs[9] = self.last_matches[agent_id]        
             
             observations[agent] = obs
             self.states[agent] = obs
