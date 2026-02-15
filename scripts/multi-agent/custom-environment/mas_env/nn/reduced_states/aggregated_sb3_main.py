@@ -1,6 +1,4 @@
 from sb3_mas_train import SB3_MAS_Train
-from sb3_mas_train_threads import SB3_MAS_Train_Parallelized_Threads
-from sb3_mas_train_processes import SB3_MAS_Train_Parallelized_Processes
 
 
 irradiance_datapaths = [
@@ -15,12 +13,12 @@ proc_interval = 1 * 60
 proc_rate = 20
 arrival_rate = 15
 
-num_episodes = 1001
+num_episodes = 4001
 
 eps_init = 1.0
 eps_fin = 0.05
 # eps_dec = 0.999
-eps_dec = 0.995
+eps_dec = 0.9985
 
 # num_agents = 2
 # battery_capacities = [25, 100]
@@ -73,52 +71,4 @@ if __name__ == "__main__":
         )
     
     # trainer.train_with_profiling()
-
-    trainer2 = SB3_MAS_Train_Parallelized_Threads(
-        num_agents,
-        num_episodes,
-        irradiance_datapaths,
-        delta_time,
-        proc_interval,
-        proc_rate,
-        arrival_rate,
-        eps_init,
-        eps_fin,
-        eps_dec,
-        battery_capacities,
-        panel_surfaces,
-        power_idle,
-        power_max,
-        train_freq,
-        w,
-        mode,
-        batch_size
-        )
-    
-    # trainer.train_with_profiling()
-
-    trainer3 = SB3_MAS_Train_Parallelized_Processes(
-        num_agents,
-        num_episodes,
-        irradiance_datapaths,
-        delta_time,
-        proc_interval,
-        proc_rate,
-        arrival_rate,
-        eps_init,
-        eps_fin,
-        eps_dec,
-        battery_capacities,
-        panel_surfaces,
-        power_idle,
-        power_max,
-        train_freq,
-        w,
-        mode,
-        batch_size
-        )
-    
-    # # trainer.train_with_profiling()
-    # trainer3.train()
-    # trainer2.train()
     trainer1.train()
