@@ -41,7 +41,7 @@ panel_surfaces = [1.0, 0.5, 0.75, 0.85, 0.65]
 power_idle = 2.6
 power_max = 6.0
 
-w = 10
+w = 1
 
 train_freq = 16
 batch_size = 256
