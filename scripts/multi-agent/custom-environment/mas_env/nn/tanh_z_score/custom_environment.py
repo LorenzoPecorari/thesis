@@ -91,8 +91,8 @@ class CustomEnvironment(ParallelEnv):
             # h_i -> "offloading framerate"
         self._observation_spaces = {
             agent: spaces.Box(
-                low=np.array([0.0, 0, 0.0, 0.0, 0], dtype=np.float32),
-                high=np.array([1.0, 3, 1.0, 1.0, 3], dtype=np.float32),
+                low=np.array([0.0, 0, 0.0, -1.0, -1.0], dtype=np.float32),
+                high=np.array([1.0, 3, 1.0, 1.0, 1.0], dtype=np.float32),
                 dtype=np.float32
             ) 
             for agent in self.possible_agents

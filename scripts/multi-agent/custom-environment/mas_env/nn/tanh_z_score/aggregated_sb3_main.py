@@ -9,16 +9,16 @@ irradiance_datapaths = [
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
     ]
 delta_time = 15 * 60
-proc_interval = 10 * 60
+proc_interval = 1 * 60
 proc_rate = 20
 arrival_rate = 15
 
-num_episodes = 1001
+num_episodes = 4001
 
 eps_init = 1.0
 eps_fin = 0.05
 # eps_dec = 0.999
-eps_dec = 0.995
+eps_dec = 0.9985
 
 # num_agents = 2
 # battery_capacities = [25, 100]
