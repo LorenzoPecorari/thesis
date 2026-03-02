@@ -249,6 +249,67 @@ def batch_comparison(episodes, day, interval, num_agents, mode):
     plt.savefig(f"batch_time_comparison_episode_{episodes}_{day}_{interval}_{num_agents}agents_{mode}.pdf")
     plt.close()
 
+def conf_comparison(episodes, day, interval, num_agents, mode, mode1, mode2):
+    mode1_local = 0
+    mode1_vector = []
+    mode1_vector_single = []
+    
+    mode2_local = 0
+    mode2_vector = []
+    mode2_vector_single = []
+    
+    with open(f'./{mode1}/csvs/csvs_batch_256/time_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
+            csvFile = csv.reader(file)
+            for line in csvFile:
+                mode1_vector_single.append(float(line[0]))
+                mode1_local += float(line[0])
+                mode1_vector.append(mode1_local)
+
+    with open(f'./{mode2}/csvs/csvs_batch_256/time_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
+            csvFile = csv.reader(file)
+            for line in csvFile:
+                mode2_vector_single.append(float(line[0]))
+                mode2_local += float(line[0])
+                mode2_vector.append(mode1_local)
+    
+    
+    window = 10
+    plt.suptitle("Total time taken by execution comparison")
+    plt.title(f"Episodes: {episodes}, Day: {day}, Interval: {interval}, num_agents: {num_agents}, Mode: {mode}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Time [s]")
+        
+    print("mode: ", mode == "")
+    
+    # plt.plot(range(window - 1, len(levels[i])), np.convolve(levels[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
+    plt.plot(range(window - 1, len(mode1_vector)), np.convolve(mode1_vector, np.ones(window)/window, mode='valid'), label = f"{mode1}", alpha = 1.0, color = "blue")
+    plt.plot(range(window - 1, len(mode2_vector)), np.convolve(mode2_vector, np.ones(window)/window, mode='valid'), label = f"{mode2}", alpha = 1.0, color = "red")
+    # plt.plot(non_parallelized_vector_single, label = f"Non parallelized", alpha = 0.8)
+    # plt.plot(parallelized_vector_single, label = f"Parallelized - threads", alpha = 0.8)
+    # plt.plot(process_parallelized_vector_single, label = f"Parallelized - processes", alpha = 0.8)
+    
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"time_comparison_{episodes}_{day}_{interval}_{num_agents}agents_{mode}_{mode1}_{mode2}.pdf")
+    plt.close()
+
+    plt.suptitle("Time taken per episode comparison")
+    plt.title(f"Episodes: {episodes}, Day: {day}, Interval: {interval}, num_agents: {num_agents}, Mode: {mode}")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Time [s]")
+    
+    plt.plot(range(window - 1, len(mode2_vector_single)), np.convolve(mode2_vector_single, np.ones(window)/window, mode='valid'), label = f"{mode1}", alpha = 1.0, color = "blue")
+    plt.plot(range(window - 1, len(mode1_vector_single)), np.convolve(mode1_vector_single, np.ones(window)/window, mode='valid'), label = f"{mode2}", alpha = 1.0, color = "red")
+    
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"batch_time_comparison_episode_{episodes}_{day}_{interval}_{num_agents}agents_{mode}_{mode1}_{mode2}.pdf")
+    plt.close()
+    
 
 main(4000, 355, 60, 5, "cuda")
 # cpu_vs_gpu(4000, 355, 60, 5, "sequential")
