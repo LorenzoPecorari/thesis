@@ -503,6 +503,7 @@ class CustomEnvironment(ParallelEnv):
         if(std_q < 1e-5):
             std_q = 1e-5
         
+        #sigmoid of z score for battery and backlog level
         info_b = [round(1/(1 + np.exp(-((batteries[i] - mean_b) / std_b))), 2) for i in range(0, self._num_agents)]
         info_q = [round(1/(1 + np.exp(-((backlogs[i] - mean_q) / std_q))), 2) for i in range(0, self._num_agents)]
 
