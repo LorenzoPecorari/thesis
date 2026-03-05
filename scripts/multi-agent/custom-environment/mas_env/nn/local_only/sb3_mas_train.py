@@ -657,6 +657,6 @@ class SB3_MAS_Train:
         self.plot_offloading_matchings(hs_matchings)
         
         self.save_battery_csv(battery_daily)
-        self.save_backlog_csv(backlogs_daily)
+        self.save_backlog_csv(backlogs)
         self.save_rewards_csv(rewards_plot)
         self.save_time_csv(times)
