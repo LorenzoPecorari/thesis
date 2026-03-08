@@ -335,7 +335,8 @@ class CustomEnvironment(ParallelEnv):
             
             idx = (self.episode * self.max_steps) + self.timestep
             self.irradiance_level[agent_id] = self.irradiance_arrays[agent_id][idx] / self.max_irrad
-            panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval * self.panel_efficiency
+            # panel_energy = self.irradiance_level[agent_id] * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval * self.panel_efficiency
+            panel_energy = (self.irradiance_level[agent_id] * random.uniform(0.8, 1.2)) * self.max_irrad * self.panel_surfaces[agent_id] * self._proc_interval * self.panel_efficiency
             
             actual_battery = self.battery_energies[agent_id] + panel_energy
             backlog = self.backlogs[agent_id]

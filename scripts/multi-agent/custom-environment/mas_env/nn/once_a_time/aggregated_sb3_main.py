@@ -19,12 +19,12 @@ proc_interval = 1 * 60
 proc_rate = 20
 arrival_rate = 15
 
-num_episodes = 101
+num_episodes = 2001
 
 eps_init = 1.0
 eps_fin = 0.05
 # eps_dec = 0.999
-eps_dec = 0.9985
+eps_dec = 0.995
 
 # num_agents = 2
 # battery_capacities = [25, 100]
@@ -74,7 +74,7 @@ panel_surfaces = [
 power_idle = 2.6
 power_max = 6.0
 
-smart_node = 0
+smart_node = 6
 
 w = 1.0
 
