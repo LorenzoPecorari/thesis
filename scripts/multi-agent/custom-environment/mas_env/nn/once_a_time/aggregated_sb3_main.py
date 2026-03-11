@@ -74,7 +74,7 @@ panel_surfaces = [
 power_idle = 2.6
 power_max = 6.0
 
-smart_node = 6
+smart_node = 0
 
 w = 1.0
 
@@ -84,6 +84,33 @@ batch_size = 256
 mode = 'cuda'
 
 if __name__ == "__main__":
+    trainer1 = SB3_MAS_Train(
+        num_agents,
+        num_episodes,
+        irradiance_datapaths,
+        delta_time,
+        proc_interval,
+        proc_rate,
+        arrival_rate,
+        eps_init,
+        eps_fin,
+        eps_dec,
+        battery_capacities,
+        panel_surfaces,
+        power_idle,
+        power_max,
+        train_freq,
+        w,
+        mode,
+        batch_size,
+        smart_node
+        )
+    
+    # trainer.train_with_profiling()
+    trainer1.train()
+
+    smart_node = 2
+    
     trainer1 = SB3_MAS_Train(
         num_agents,
         num_episodes,

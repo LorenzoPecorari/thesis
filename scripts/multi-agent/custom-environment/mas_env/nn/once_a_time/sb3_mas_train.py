@@ -588,23 +588,27 @@ class SB3_MAS_Train:
         total_timesteps = self.num_episodes * self.max_steps
         
         folder = Path("./saved_models")
-        file_py = list(folder.glob("*_*_*.zip"))
+        
+        pattern = f"DQN_*_*.zip"
+        file_py = list(folder.glob(pattern))
+        
+        if file_py:
+            most_recent = max(file_py, key=lambda f: f.stat().st_mtime)  # Usa filesystem timestamp
             
-        if(file_py):
-            most_recent = max(file_py, key=lambda f: f.name.split("_")[-1])
             print(f"Caricamento: {most_recent}")
-
+            
             model = DQN.load(str(most_recent))
-
+            
             wrapped_env = EnvWrapper(self.env, self.smart_node)
             venv = DummyVecEnv([lambda: wrapped_env])
             model.set_env(venv)
-
+            
             model.learn(total_timesteps=0)
-
+            
             self.models[self.smart_node] = model
         else:
-            input("No file detected - press ENTER to continue...")
+            print(f"No saved model found for smart_node {self.smart_node} ({self.battery_capacities[self.smart_node]}Wh)")
+            input("Press ENTER to continue with fresh model...")
         
         for i in range(0, self.num_episodes):
             temp = time.time()
