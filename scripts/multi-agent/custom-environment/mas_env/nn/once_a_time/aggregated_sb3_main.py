@@ -45,16 +45,16 @@ eps_dec = 0.995
 
 num_agents = 10
 battery_capacities = [
-    25, 
-    100,  
-    50,   
-    37,   
-    65,   
-    80,   
-    40,   
-    75,   
-    55,   
-    90    
+    25,     #
+    100,    #
+    50,     #
+    37,     #
+    65,     #
+    80,     #
+    40,     #
+    75,     # X
+    55,     #
+    90      # x
 ]
 
 panel_surfaces = [
@@ -74,7 +74,7 @@ panel_surfaces = [
 power_idle = 2.6
 power_max = 6.0
 
-smart_node = 0
+smart_node = 9
 
 w = 1.0
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     # trainer.train_with_profiling()
     trainer1.train()
 
-    smart_node = 2
+    smart_node = 7
     
     trainer1 = SB3_MAS_Train(
         num_agents,
