@@ -605,7 +605,11 @@ class SB3_MAS_Train:
             
             model.learn(total_timesteps=0)
             
-            self.models[self.smart_node] = model
+            # self.models[self.smart_node] = model
+            
+            for agent in range(self.num_agents):
+                self.models[agent] = model
+            
         else:
             print(f"No saved model found for smart_node {self.smart_node} ({self.battery_capacities[self.smart_node]}Wh)")
             input("Press ENTER to continue with fresh model...")
@@ -639,15 +643,15 @@ class SB3_MAS_Train:
                 
                 for agent_id in range(0, self.num_agents):
                     
-                    if(agent_id == self.smart_node):
-                        # input(f"agent_id: {agent_id} - smart_node: {self.smart_node}")
+                    # if(agent_id == self.smart_node):
+                    #     # input(f"agent_id: {agent_id} - smart_node: {self.smart_node}")
             
-                        if(np.random.random() < self.eps):
-                            action = self.models[agent_id].action_space.sample()
-                        else:
-                            action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
-                    else:
+                    if(np.random.random() < self.eps):
                         action = self.models[agent_id].action_space.sample()
+                    else:
+                        action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
+                    # else:
+                    #     action = self.models[agent_id].action_space.sample()
                     
                     self.models[agent_id]._current_progress_remaining = progress_remaining     
                     # if(np.random.random() < self.eps):
@@ -723,7 +727,7 @@ class SB3_MAS_Train:
                 self.env.hs[agent_id] = 0
                 self.env.hs_counter[agent_id] = 0
         
-        self.models[self.smart_node].save(f'./saved_models/DQN_{self.battery_capacities[self.smart_node]}Wh_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip')
+        # self.models[self.smart_node].save(f'./saved_models/DQN_{self.battery_capacities[self.smart_node]}Wh_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip')
 
         folder_path = datetime.now().strftime("%Y%m%d_%H%M%S")
         if not os.path.exists(folder_path):
@@ -734,7 +738,7 @@ class SB3_MAS_Train:
         else:
             print(f"Folder '{folder_path}' already exists.")
             
-        # print(folder_path)
+        print(folder_path)
                 
         self.plot_rewards(folder_path, rewards_plot)  
         self.plot_backlogs(folder_path, backlogs)
