@@ -406,7 +406,7 @@ gamma = 0.99
 eps_min = 0.05
 eps_dec = 0.99
 eps_init = 1.0
-episodes = 2001
+episodes = 2000
 
 # ============================================================================
 # TRAINING FUNCTION

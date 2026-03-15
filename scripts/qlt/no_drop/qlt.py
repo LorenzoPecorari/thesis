@@ -63,6 +63,7 @@ class Agent:
         self.eps = eps_init
         self.episodes = episodes
         self.battery_capacity = battery_capacity
+        self.proc_interval = proc_interval
         
         # 3d table, |battery_levls| x |time_levels| x |actions|        
         self.table = np.zeros((battery_bins, 4, time_bins, (int(self.fps) + 1)))
@@ -198,7 +199,9 @@ class Agent:
                     daily_backlog.append(self.env.backlog)
                     battery_trace.append(info['battery_level'] * 100)
 
-            actions_avg.append(action_avg/self.env.max_steps)
+            actions_avg.append(info["frames_processed"]/(self.env.max_steps * self.proc_interval))
+            # print(info["frames_processed"]/(self.env.max_steps * self.proc_interval), action_avg/self.env.max_steps)
+            # input()
 
                 # input("Press enter to continue...")
             
@@ -219,7 +222,8 @@ class Agent:
             battery.append(((battery_avg) / self.env.max_steps))
             irradiance.append(((avg_irrad ) / self.env.max_steps) * self.env.max_irrad)
             
-            actions.append(action_avg / self.env.max_steps)
+            # actions.append(action_avg / self.env.max_steps)
+            actions.append(info["frames_processed"]/(self.env.max_steps * self.proc_interval))
             processed_frames.append(info['frames_processed'])
             backlog.append(info['backlog_level'])
             
