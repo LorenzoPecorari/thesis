@@ -144,7 +144,8 @@ class Agent:
             action_avg = 0
             discharge = 0
             
-            action_trace = []        
+            action_trace = []     
+            actions_avg = []   
             daily_energy = []
             energy.append(0.0)
             battery_trace = []            
@@ -197,6 +198,7 @@ class Agent:
                     daily_backlog.append(self.env.backlog)
                     battery_trace.append(info['battery_level'] * 100)
 
+            actions_avg.append(action_avg/self.env.max_steps)
 
                 # input("Press enter to continue...")
             
@@ -236,6 +238,8 @@ class Agent:
             if(len(daily_backlog) > 0):
                 daily_backlogs.append(daily_backlog)
             # input("Press enter to continue...")
+            
+        input(action_trace)
         
         self.plot_cumulative_trace(cumulative_traces)
         self.plot_daily_battery(battery_traces)
@@ -258,8 +262,9 @@ class Agent:
         
         self.save_results("backlog", stored)
         self.save_results("rewards", rewards)
-        
-        return rewards, dropped_frames, processed_frames, battery, irradiance, backlog
+        self.save_results("framerates", actions)
+                
+        return rewards, dropped_frames, processed_frames, battery, irradiance, backlog, action_trace
 
     ### daily metrics
 

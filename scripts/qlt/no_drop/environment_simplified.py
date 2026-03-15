@@ -13,6 +13,7 @@ import numpy as np
 # others
 import random
 import datetime
+import random
 
 # custom script
 import interpol as ip
@@ -70,6 +71,7 @@ class EnergyPVEnv(gymnasium.Env):
 
         # battery and system specs
         self.battery_level = 0.0
+        self.battery  = 0
         self.battery_capacity = battery_capacity * 3600             # [Wh -> Ws = J]
         
         self.backlog = 0
@@ -147,6 +149,7 @@ class EnergyPVEnv(gymnasium.Env):
             self.day = seed % 365
         
         self.battery_level = 0.5
+        self.battery = 0.5 * self.battery_capacity
         
         self.backlog = 0
         self.backlog_level = self.calculate_backlog()
@@ -220,27 +223,36 @@ class EnergyPVEnv(gymnasium.Env):
         if(irradiance <= 0.0):
             return 0.0
         
+        
         power_pv = irradiance * self.pv_area * self.pv_efficiency
         # power_pv = min(irradiance * self.pv_area * self.pv_efficiency, 10)
         # print(f"pv power: {irradiance * self.pv_area * self.pv_efficiency} VS {power_pv} => energy: {power_pv * self.interval}")
         energy_pv = power_pv * self.interval
+
+        # print(self.battery_level, energy_pv, power_pv, irradiance)
+        # input()
+
         return energy_pv
     
     def update_battery_level(self, value):
         normalized_value = value / self.battery_capacity
         
-        if((self.battery_level + normalized_value) > 1.0):
+        if((normalized_value) > 1.0):
+            # print(f"battery: {self.battery} - battery_level: {self.battery_level} - normalized_value: {normalized_value}")
+            self.battery = self.battery_capacity
             self.battery_level = 1.0
-        elif((self.battery_level + normalized_value) < 0.0):
+        elif((normalized_value) < 0.0):
             self.battery_level = 0.0
+            self.battery = 0.0
         else:
-            self.battery_level = self.battery_level + normalized_value
+            self.battery = value
+            self.battery_level = normalized_value
 
     
     def calculate_reward(self, action, panel_energy):
-        battery = self.battery_level * self.battery_capacity
+        battery = self.battery
         actual = battery + panel_energy
-        needed = action * self.interval * self.e_frame + self.e_idle
+        needed = (action * self.interval * self.e_frame) + self.e_idle
         
         processable = max(min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval, self.backlog), 0)
         processed = 0
@@ -249,8 +261,12 @@ class EnergyPVEnv(gymnasium.Env):
         reward = 0
         
         if(actual > needed and processable > 0):
+            # print(actual, needed, panel_energy)
+            # input()
             # input(f"{backlog} - old")
-            battery = panel_energy - ((processed * self.e_frame) + self.e_idle)
+            actual = max(actual - needed, 0)
+            # print(battery)
+            
             processed = min(processable, action * self.interval)
             new_backlog = self.backlog - processed
             # input(f"{backlog} - new")
@@ -267,7 +283,7 @@ class EnergyPVEnv(gymnasium.Env):
             finally:
                 backlog = new_backlog
         else:
-            battery = panel_energy - self.e_idle
+            actual = panel_energy - self.e_idle
             # self.update_battery_level(panel_energy - self.e_idle)
             
             if(processable == 0 and action == 0):
@@ -275,13 +291,15 @@ class EnergyPVEnv(gymnasium.Env):
             else:
                 reward = 0
                 
-        self.update_state(battery, backlog, processed)
+        self.update_state(actual, backlog, processed)
         return reward
     
     def update_state(self, battery, backlog, processed):
         self.update_battery_level(battery)
         self.backlog = max(backlog, 0)
         self.total_frames_processed += processed
+        
+        # input()
 
         return
         
