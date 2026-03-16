@@ -595,7 +595,7 @@ if __name__ == "__main__":
     proc_rate = 20
     arrival_rate = 15
     
-    num_agents = 3
+    num_agents = 2
     num_episodes = 4001
 
     power_idle = 2.6
