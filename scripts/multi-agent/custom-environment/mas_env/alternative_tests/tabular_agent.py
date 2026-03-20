@@ -99,11 +99,13 @@ class TabularAgent:
                     ]
         else:
             state_idx = self.state_discretization(state)
+            indices = (*state_idx,)
+            q_values = self.table[indices]
             # q_values = self.table
             # for elem in state_idx:
             #     q_values = q_values[elem]
 
-            q_values = self.table[*state_idx]
+            # q_values = self.table[*state_idx]
 
             best_value = -1
             best_action = [0, 0, 0, 0]
@@ -133,16 +135,18 @@ class TabularAgent:
         next_state_idx = self.state_discretization(next_state)
         
         f, x, g, h = action
+        indices = (*state_idx, f, x, g, h)
+        q_value = self.table[indices]
         
-        q_value = self.table[*state_idx, f, x, g, h]
+        q_value = self.table[indices]
         # for elem in state_idx:
         #     q_values = q_values[elem]
             
         # for a in action:
         #     q_values = q_values[a]
     
-        next_q_value = self.table[*next_state_idx]
-        # for elem in next_state_idx:
+        # next_indices = (*next_state_idx)
+        next_q_value = self.table[(*next_state_idx,)]        # for elem in next_state_idx:
         #     next_q_values = next_q_values[elem]
         
         best_next_value = np.max(next_q_value)
@@ -153,7 +157,7 @@ class TabularAgent:
         #                     if(next_q_value[f][x][g][h] > best_next_value):
         #                         best_next_value = next_q_value[f][x][g][h]
                                 
-        self.table[*state_idx, f, x, g, h] = ((1 - self.alpha) * q_value) + (self.alpha * (reward + (self.gamma * best_next_value)))
+        self.table[indices] = ((1 - self.alpha) * q_value) + (self.alpha * (reward + (self.gamma * best_next_value)))
 
     def update_epsilon(self):
         if(self.eps > self.eps_min):
