@@ -7,6 +7,14 @@ from env_wrapper import EnvWrapper
 import numpy as np
 import matplotlib.pyplot as plt
 
+import time
+import csv
+import os
+import glob
+
+from pathlib import Path
+from datetime import datetime
+
 class SB3_MAS_Train:
     def __init__(self, 
                  num_agents,
@@ -48,6 +56,9 @@ class SB3_MAS_Train:
         self.eps_fin = eps_fin
         self.eps = 0
         
+        self.batch_size = 256
+        self.mode = "cuda"
+        
         self.env = CustomEnvironment(
         num_agents,
         irradiance_datapaths,
@@ -88,7 +99,7 @@ class SB3_MAS_Train:
                 policy_kwargs=None,
                 verbose=0,
                 seed=None,
-                device='auto',
+                device='cuda',
                 _init_setup_model=True
             )
           for i in range(0, num_agents)}
@@ -306,6 +317,99 @@ class SB3_MAS_Train:
         plt.tight_layout()
         plt.savefig(f"offloading_matchings_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.w}_{self.num_agents}agents.pdf")
         plt.close()
+        
+    def save_battery_csv(self, folder_path, battery_daily):
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./{folder_path}/csvs/csvs_batch_{self.batch_size}/battery_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            
+            with open(filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                
+                if len(battery_daily[agent_id]) > 0 and len(battery_daily[agent_id][0]) > 0:
+                    n_timesteps = len(battery_daily[agent_id][0])
+                    header = [f't{i}' for i in range(n_timesteps)]
+                    writer.writerow(header)
+                    
+                    for episode_data in battery_daily[agent_id]:
+                        writer.writerow(episode_data)
+            
+            print(f"saved: {filename}")
+    
+    def save_backlog_csv(self, folder_path, backlog_daily):
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./{folder_path}/csvs/csvs_batch_{self.batch_size}/backlog_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            
+            with open(filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                
+                if len(backlog_daily[agent_id]) > 0 and len(backlog_daily[agent_id][0]) > 0:
+                    n_timesteps = len(backlog_daily[agent_id][0])
+                    header = [f't{i}' for i in range(n_timesteps)]
+                    writer.writerow(header)
+                    
+                    for episode_data in backlog_daily[agent_id]:
+                        writer.writerow(episode_data)
+            
+            print(f"saved: {filename}")
+
+    def save_rewards_csv(self, folder_path, rewards):
+        os.makedirs('./csvs/{folder_path}/csvs_batch_{self.batch_size}', exist_ok=True)
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./{folder_path}/csvs/csvs_batch_{self.batch_size}/rewards_agent_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            
+            with open(filename, "w") as file:
+                for elem in rewards[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+                
+        print(f"saved: {filename}")
+        
+    def save_time_csv(self, folder_path, times):
+        os.makedirs(f'./{folder_path}/csvs/csvs_batch_{self.batch_size}', exist_ok=True)
+        filename = f"./{folder_path}/csvs/csvs_batch_{self.batch_size}/time_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+
+        with open(filename, "w") as file:
+            for elem in times:
+                file.write(str(float(elem)) + "\n")
+                
+        print(f"saved: {filename}")
+
+    def save_framerate_csv(self, folder_path, fs, hs, framerates):
+        os.makedirs(f'./{folder_path}/csvs/csvs_batch_{self.batch_size}', exist_ok=True)
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./{folder_path}/csvs/csvs_batch_{self.batch_size}/local_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in fs[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+
+                print(f"saved: {filename}")
+
+            
+            filename = f"./{folder_path}/csvs/csvs_batch_{self.batch_size}/offloading_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in hs[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+                print(f"saved: {filename}")
+
+            
+            filename = f"./{folder_path}/csvs/csvs_batch_{self.batch_size}/total_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in framerates[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+                print(f"saved: {filename}")
+        
+    def save_offloading_matchings_csv(self, folder_path, hs_matchings):
+        os.makedirs(f'./{folder_path}/csvs/csvs_batch_{self.batch_size}', exist_ok=True)
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./{folder_path}/csvs/csvs_batch_{self.batch_size}/matchings_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in hs_matchings[agent_id]:
+                    file.write(str(int(elem)) + "\n")
+                print(f"saved: {filename}")
 
     def decode(self, encoded_action):
         fti = int(encoded_action / (3 * self.num_agents * (self.proc_rate + 1)))
@@ -452,6 +556,17 @@ class SB3_MAS_Train:
                 self.env.hs[agent_id] = 0
                 self.env.hs_counter[agent_id] = 0
 
+        folder_path = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if not os.path.exists(folder_path):
+            os.mkdir(folder_path)
+            print(f"Folder '{folder_path}' created.")
+            os.mkdir(folder_path + "/csvs")
+            os.mkdir(folder_path + "/csvs/csvs_batch_256")
+        else:
+            print(f"Folder '{folder_path}' already exists.")
+            
+        print(folder_path)
+               
                 
         self.plot_rewards(rewards_plot)  
         self.plot_backlogs(backlogs)
@@ -462,3 +577,11 @@ class SB3_MAS_Train:
         self.plot_local_framerate(fs)
         self.plot_offloading_framerate(hs)
         self.plot_offloading_matchings(hs_matchings)
+        
+        self.save_battery_csv(folder_path, battery_daily)
+        self.save_backlog_csv(folder_path, backlogs_daily)
+        self.save_rewards_csv(folder_path, rewards_plot)
+        # self.save_time_csv(folder_path, times)
+        self.save_framerate_csv(folder_path, fs, hs, framerates)
+        self.save_offloading_matchings_csv(folder_path,hs_matchings)
+        

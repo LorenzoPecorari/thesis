@@ -56,8 +56,9 @@ def compute_avg_rewards(episodes, day, interval, num_agents):
     plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"reduced_states", alpha = 1.0)
 
     plt.grid()
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
     plt.tight_layout()
+
     plt.savefig(f"./comparisons/rewards/average_episodes_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
     plt.close()
     
@@ -103,7 +104,7 @@ def compute_avg_framerate(episodes, day, interval, num_agents):
     plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"reduced_states", alpha = 1.0)
 
     plt.grid()
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
     plt.tight_layout()
     plt.savefig(f"./comparisons/framerates/average_framerates_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
     plt.close()
@@ -158,11 +159,12 @@ def compute_avg_backlog(episodes, day, interval, num_agents):
     plt.ylabel("Average Backlog")
     
     plt.plot(sample_episodes, backlog1_samples, 'o-', label=f"once_a_time", alpha=1.0, markersize=8, linewidth=2)
-    plt.plot(sample_episodes, backlog2_samples[:-1], 's-', label=f"reeduces_states", alpha=1.0, markersize=8, linewidth=2)
+    plt.plot(sample_episodes, backlog2_samples[:-1], 's-', label=f"reduced_states", alpha=1.0, markersize=8, linewidth=2)
 
     plt.grid(alpha=0.3)
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
     plt.tight_layout()
+
     plt.savefig(f"./comparisons/backlog/average_backlog_sampled_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
     plt.close()
  
@@ -216,11 +218,12 @@ def compute_avg_battery(episodes, day, interval, num_agents):
     plt.ylabel("Average Battery")
     
     plt.plot(sample_episodes, backlog1_samples, 'o-', label=f"once_a_time", alpha=1.0, markersize=8, linewidth=2)
-    plt.plot(sample_episodes, backlog2_samples[:-1], 's-', label=f"reeduces_states", alpha=1.0, markersize=8, linewidth=2)
+    plt.plot(sample_episodes, backlog2_samples[:-1], 's-', label=f"reduced_states", alpha=1.0, markersize=8, linewidth=2)
 
     plt.grid(alpha=0.3)
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
     plt.tight_layout()
+
     plt.savefig(f"./comparisons/backlog/average_battery_sampled_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
     plt.close()
 

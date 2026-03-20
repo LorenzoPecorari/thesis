@@ -36,7 +36,9 @@ def plot_rewards(folder_path):
         plt.plot(range(window - 1, len(rewards[id])), np.convolve(rewards[id], np.ones(window)/window, mode='valid'), label = f"{elements[id].split('_')[2]}Wh", alpha = 1.0)
 
     plt.grid()
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+
     plt.tight_layout()
     plt.savefig(f"./comparisons/rewards_once_time_cuda.pdf")
     plt.close()
@@ -71,7 +73,7 @@ def plot_framerate(folder_path):
         plt.plot(range(window - 1, len(framerates[id])), np.convolve(framerates[id], np.ones(window)/window, mode='valid'), label = f"{elements[id].split('_')[2]}Wh", alpha = 1.0)
 
     plt.grid()
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
     plt.tight_layout()
     plt.savefig(f"./comparisons/fps_once_time_cuda.pdf")
     plt.close()
@@ -101,14 +103,14 @@ def plot_batteries(folder_path):
     plt.suptitle("Average battery")
     plt.title(f"Episodes: {2000}, Day: {day}, Interval: {interval},  Mode: cuda")
 
-    plt.xlabel("Episodes")
+    plt.xlabel("Episodes · 100")
     plt.ylabel("Battery")
 
     for id in range(len(elements)):
         plt.plot(range(window - 1, len(batteries[id])), np.convolve(batteries[id], np.ones(window)/window, mode='valid'), label = f"{elements[id].split('_')[1]}Wh", alpha = 1.0)
 
     plt.grid()
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
     plt.tight_layout()
     plt.savefig(f"./comparisons/batteries_once_time_cuda.pdf")
     plt.close()
@@ -138,14 +140,14 @@ def plot_backlogs(folder_path):
     plt.suptitle("Average backlog")
     plt.title(f"Episodes: {2000}, Day: {day}, Interval: {interval},  Mode: cuda")
 
-    plt.xlabel("Episodes")
+    plt.xlabel("Episodes · 100")
     plt.ylabel("Backlog")
 
     for id in range(len(elements)):
         plt.plot(range(window - 1, len(batteries[id])), np.convolve(batteries[id], np.ones(window)/window, mode='valid'), label = f"{elements[id].split('_')[1]}Wh", alpha = 1.0)
 
     plt.grid()
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
     plt.tight_layout()
     plt.savefig(f"./comparisons/backlogs_once_time_cuda.pdf")
     plt.close()
