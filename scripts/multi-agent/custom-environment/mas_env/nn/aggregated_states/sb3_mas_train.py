@@ -132,7 +132,7 @@ class SB3_MAS_Train:
         for i in range(0, self.num_agents):
             # print(rewards[i])
             plt.plot(range(window - 1, len(rewards[i])), np.convolve(rewards[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            # plt.plot(rewards[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            plt.plot(rewards[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
         plt.grid()
         # plt.ylim(-10, 500)
@@ -153,7 +153,7 @@ class SB3_MAS_Train:
         for i in range(0, self.env._num_agents):    
             # print(rewards[i])
             plt.plot(range(window - 1, len(levels[i])), np.convolve(levels[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            # plt.plot(levels[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            plt.plot(levels[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
@@ -179,7 +179,7 @@ class SB3_MAS_Train:
         
             # print(rewards[i])
             plt.plot(range(window - 1, len(levels[i])), np.convolve(levels[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            # plt.plot(levels[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            plt.plot(levels[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
             plt.grid()
             plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
@@ -199,7 +199,7 @@ class SB3_MAS_Train:
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
             plt.plot(range(window - 1, len(backlogs[i])), np.convolve(backlogs[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            # plt.plot(backlogs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            plt.plot(backlogs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
         plt.grid()
         # plt.legend()
@@ -262,7 +262,7 @@ class SB3_MAS_Train:
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
             plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            # plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
@@ -282,7 +282,7 @@ class SB3_MAS_Train:
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
             plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            # plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
@@ -302,7 +302,7 @@ class SB3_MAS_Train:
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
             plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            # plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
@@ -322,7 +322,7 @@ class SB3_MAS_Train:
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
             plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {self.battery_capacities[i]}Wh", alpha = 1.0)
-            # plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
+            plt.plot(fs[i], label = f"raw {self.battery_capacities[i]}Wh", alpha = 0.3)
         
         plt.grid()
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
@@ -387,6 +387,41 @@ class SB3_MAS_Train:
                 file.write(str(float(elem)) + "\n")
                 
         print(f"saved: {filename}")
+        
+    def save_framerate_csv(self, fs, hs, framerates):
+        os.makedirs(f'./csvs/csvs_batch_{self.batch_size}', exist_ok=True)
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./csvs/csvs_batch_{self.batch_size}/local_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in fs[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+
+                print(f"saved: {filename}")
+
+            
+            filename = f"./csvs/csvs_batch_{self.batch_size}/offloading_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in hs[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+                print(f"saved: {filename}")
+
+            
+            filename = f"./csvs/csvs_batch_{self.batch_size}/total_framerate_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in framerates[agent_id]:
+                    file.write(str(float(elem)) + "\n")
+                print(f"saved: {filename}")
+        
+    def save_offloading_matchings_csv(self, hs_matchings):
+        os.makedirs(f'./csvs/csvs_batch_{self.batch_size}', exist_ok=True)
+        
+        for agent_id in range(self.num_agents):
+            filename = f"./csvs/csvs_batch_{self.batch_size}/matchings_{self.battery_capacities[agent_id]}_{self.num_episodes-1}_{self.env.episode}_{self.proc_interval}_{self.num_agents}agents_{self.mode}.csv"
+            with open(filename, "w") as file:
+                for elem in hs_matchings[agent_id]:
+                    file.write(str(int(elem)) + "\n")
+                print(f"saved: {filename}")
 
 
     def decode(self, encoded_action):
@@ -660,3 +695,5 @@ class SB3_MAS_Train:
         self.save_backlog_csv(backlogs_daily)
         self.save_rewards_csv(rewards_plot)
         self.save_time_csv(times)
+        self.save_framerate_csv(fs, hs, framerates)
+        self.save_offloading_matchings_csv(hs_matchings)

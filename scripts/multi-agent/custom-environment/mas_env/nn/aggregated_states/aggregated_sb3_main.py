@@ -44,7 +44,7 @@ eps_dec = 0.9985
 # battery_capacities = [25, 100, 50, 37, 65]
 # panel_surfaces = [1.0, 0.5, 0.75, 0.85, 0.65]
 
-num_agents = 10
+num_agents = 5
 battery_capacities = [
     25, 
     100,  
