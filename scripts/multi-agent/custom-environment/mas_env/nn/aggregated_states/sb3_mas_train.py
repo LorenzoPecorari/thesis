@@ -194,7 +194,7 @@ class SB3_MAS_Train:
         plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
         
         plt.xlabel("Timesteps")
-        plt.ylabel("Baclog")
+        plt.ylabel("Backlog")
         
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
@@ -277,7 +277,7 @@ class SB3_MAS_Train:
         plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
         
         plt.xlabel("Episodes")
-        plt.ylabel("Backlog")
+        plt.ylabel("Framerate")
         
         for i in range(0, self.env._num_agents):
             # print(rewards[i])
@@ -297,7 +297,7 @@ class SB3_MAS_Train:
         plt.title(f"P_i = {self.power_idle}, P_f = {self.power_max}, fps = {self.proc_rate}, interval: {self.proc_interval}s")
         
         plt.xlabel("Episodes")
-        plt.ylabel("Backlog")
+        plt.ylabel("Framerate")
         
         for i in range(0, self.env._num_agents):
             # print(rewards[i])

@@ -31,9 +31,9 @@ eps_dec = 0.9985
 # panel_surfaces = [1.0, 0.5]
 
 
-# num_agents = 3
-# battery_capacities = [25, 100, 50]
-# panel_surfaces = [1.0, 0.5, 0.75]
+num_agents = 3
+battery_capacities = [25, 100, 50]
+panel_surfaces = [1.0, 0.5, 0.75]
 
 # num_agents = 4
 # battery_capacities = [25, 100, 50, 37]
@@ -43,32 +43,32 @@ eps_dec = 0.9985
 # battery_capacities = [25, 100, 50, 37, 65]
 # panel_surfaces = [1.0, 0.5, 0.75, 0.85, 0.65]
 
-num_agents = 10
-battery_capacities = [
-    25, 
-    100,  
-    50,   
-    37,   
-    65,   
-    80,   
-    40,   
-    75,   
-    55,   
-    90    
-]
+# num_agents = 10
+# battery_capacities = [
+#     25, 
+#     100,  
+#     50,   
+#     37,   
+#     65,   
+#     80,   
+#     40,   
+#     75,   
+#     55,   
+#     90    
+# ]
 
-panel_surfaces = [
-    1.00,  
-    0.50,  
-    0.75,  
-    0.85,  
-    0.65,  
-    0.55,  
-    0.90,  
-    0.60,  
-    0.80,  
-    0.52   
-]
+# panel_surfaces = [
+#     1.00,  
+#     0.50,  
+#     0.75,  
+#     0.85,  
+#     0.65,  
+#     0.55,  
+#     0.90,  
+#     0.60,  
+#     0.80,  
+#     0.52   
+# ]
 
 
 power_idle = 2.6

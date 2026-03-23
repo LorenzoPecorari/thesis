@@ -16,7 +16,7 @@ num_episodes = 4001
 
 eps_init = 1.0
 eps_fin = 0.05
-eps_dec = 0.9988
+eps_dec = 0.9985
 
 # num_agents = 2
 # battery_capacities = [25, 100]
@@ -30,7 +30,7 @@ eps_dec = 0.9988
 # battery_capacities = [25, 100, 50, 37]
 # panel_surfaces = [1.0, 0.5, 0.75, 0.85]
 
-num_agents = 5
+num_agents = 3
 battery_capacities = [25, 100, 50, 37, 65]
 panel_surfaces = [1.0, 0.5, 0.75, 0.85, 0.65]
 
@@ -39,7 +39,7 @@ power_max = 6.0
 
 w = 1.0
 
-train_freq = 8
+train_freq = 16
 
 if __name__ == "__main__":
     trainer = SB3_MAS_Train(
