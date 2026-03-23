@@ -37,7 +37,7 @@ def test_policy(env, num_episodes):
                                    gamma=0.99,
                                    eps_min=0.05,
                                 #    eps_dec=0.839,     # ~ 33 episodes   
-                                   eps_dec=0.9988,      # ~ 2500 episodes
+                                   eps_dec=0.9985,      # ~ 2500 episodes
                                 #    eps_dec=0.9985,    # ~ 2000 episodes
                                 #    eps_dec=0.997,     # ~ 1000 episodes
                                     # eps_dec=0.9975,     # ~ 1200 episodes
@@ -158,7 +158,7 @@ def test_policy(env, num_episodes):
             else:
                 hs[agent].append(0.0)
 
-            battery_levels[agent].append((batteries[agent] / step) * env.battery_capacities[agent])
+            battery_levels[agent].append((batteries[agent] / step))
             # print(f"agent: {agent} - battery_level: {batteries[agent]} - battery: {battery_levels[agent]}")
             batteries[agent] = []
             
@@ -227,25 +227,32 @@ def test_policy(env, num_episodes):
     plot_recvd_daily(received)
     plot_sent_daily(sent)
     
-    save_results(battery_levels, rewards_for_plot, backlogs_average, num_episodes)
+    save_results(battery_levels, rewards_for_plot, backlogs_average, framerates, num_episodes, num_agents)
 
-def save_results(batteries, rewards, backlogs, num_episodes):
+def save_results(batteries, rewards, backlogs, framerates, num_episodes, num_agents):
     for id in range(0, len(env.possible_agents)):
-        filepath = f"./saved_results/multi-agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_battery.txt"
+        filepath = f"./saved_results/multi-agents_{num_agents}agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_battery.csv"
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         with open(filepath, "w") as file:
             for elem in batteries[id]:
                 file.write(str(float(elem)) + "\n")
         
-        filepath = f"./saved_results/multi-agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_rewards.txt"
+        filepath = f"./saved_results/multi-agents_{num_agents}agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_rewards.csv"
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         with open(filepath, "w") as file:
             for elem in rewards[id]:
                 file.write(str(float(elem)) + "\n")
                 
-        filepath = f"./saved_results/multi-agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_backlogs.txt"
+        filepath = f"./saved_results/multi-agents_{num_agents}agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_framerate.csv"
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        with open(filepath, "w") as file:
+            for elem in framerates[id]:
+                file.write(str(float(elem)) + "\n")
+        
+        filepath = f"./saved_results/multi-agents_{num_agents}agents_{int(env.battery_capacities[id]/3600)}Wh_{env.episode}_{num_episodes-1}_backlogs.csv"
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         with open(filepath, "w") as file:
