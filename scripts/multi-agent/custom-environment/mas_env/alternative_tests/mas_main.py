@@ -37,7 +37,7 @@ def test_policy(env, num_episodes):
                                    gamma=0.99,
                                    eps_min=0.05,
                                 #    eps_dec=0.839,     # ~ 33 episodes   
-                                   eps_dec=0.9985,      # ~ 2500 episodes
+                                   eps_dec=0.9988,      # ~ 2500 episodes
                                 #    eps_dec=0.9985,    # ~ 2000 episodes
                                 #    eps_dec=0.997,     # ~ 1000 episodes
                                     # eps_dec=0.9975,     # ~ 1200 episodes
@@ -134,10 +134,10 @@ def test_policy(env, num_episodes):
                 agents[id].update_table(observations[id], new_observations[id], actions[id], rewards[id])
                 # print(f"agent: {id} - {actions[id][0]} , {actions[id][3]}")
                 # input()
-                if((actions[id][0] + actions[id][3]) > proc_rate):
-                    framerates_temp[id] += (actions[id][0])
-                else:
-                    framerates_temp[id] += (actions[id][0] + actions[id][3])
+                # if((actions[id][0] + actions[id][3]) > proc_rate):
+                #     framerates_temp[id] += (actions[id][0])
+                # else:
+                #     framerates_temp[id] += (actions[id][0] + actions[id][3])
                     
 
             observations = new_observations    
@@ -148,29 +148,44 @@ def test_policy(env, num_episodes):
         final_rewards.append(total_reward)
         
         framerates_to_print = []
-
         
         for agent in range(0, env._num_agents):
             rewards_for_plot[agent].append(episode_rewards[agent])
-            fs[agent].append(env.fs[agent] / step)
+            
+            local_fps = env.fs[agent] / step
+            fs[agent].append(local_fps)
+                        
             if(env.hs_counter[agent] > 0):
-                hs[agent].append(env.hs[agent] / env.hs_counter[agent])
+                offload_fps = env.hs[agent] / env.hs_counter[agent]
+                hs[agent].append(offload_fps)
+                # input(f"{agent},{offload_fps}, {env.hs[agent]}, {env.hs_counter[agent]}")
+                
             else:
+                offload_fps = 0.0
                 hs[agent].append(0.0)
+                
+            framerates[agent].append(local_fps + offload_fps)
+            framerates_to_print.append([round(local_fps,2), round(offload_fps,2)])
+            
+            # fs[agent].append(env.fs[agent] / step)
+            # if(env.hs_counter[agent] > 0):
+            #     hs[agent].append(env.hs[agent] / env.hs_counter[agent])
+            # else:
+            #     hs[agent].append(0.0)
 
             battery_levels[agent].append((batteries[agent] / step))
-            # print(f"agent: {agent} - battery_level: {batteries[agent]} - battery: {battery_levels[agent]}")
+            # # print(f"agent: {agent} - battery_level: {batteries[agent]} - battery: {battery_levels[agent]}")
             batteries[agent] = []
             
             backlogs_average[agent].append(backlogs[agent] / step)
-            backlogs[agent] = []
+            # backlogs[agent] = []
 
-            if(len(hs[agent]) > 0):
-                framerates_to_print.append([round(float(fs[agent][-1]), 3), round(float(hs[agent][-1]), 3)])                        
-            else:
-                framerates_to_print.append([round(float(fs[agent][-1]), 3), 0.0])                                        
-            # framerates_to_print.append([round(float(fs[agent][-1]), 3), round(float(send_hi[agent][0]/send_hi[agent][1]), 3), round(float(recv_hi[agent][0]/recv_hi[agent][1]), 3), round(float(hs[agent][-1]), 3)])
-            framerates[agent].append(framerates_temp[agent] / step)
+            # if(len(hs[agent]) > 0):
+            #     framerates_to_print.append([round(float(fs[agent][-1]), 3), round(float(hs[agent][-1]), 3)])                        
+            # else:
+            #     framerates_to_print.append([round(float(fs[agent][-1]), 3), 0.0])                                        
+            # # framerates_to_print.append([round(float(fs[agent][-1]), 3), round(float(send_hi[agent][0]/send_hi[agent][1]), 3), round(float(recv_hi[agent][0]/recv_hi[agent][1]), 3), round(float(hs[agent][-1]), 3)])
+            # framerates[agent].append(framerates_temp[agent] / step)
             
             env.fs[agent] = 0
             env.hs[agent] = 0
@@ -201,6 +216,7 @@ def test_policy(env, num_episodes):
             
             agents[agent].update_epsilon()
         
+        # if(episode % 100 == 0):
         print(f"Episode: {episode+1}/{num_episodes} - rewards: {episode_rewards} - framerates: {framerates_to_print}")
         
     # for agent in range(0, env._num_agents):
