@@ -106,7 +106,8 @@ def test_policy(env, num_episodes):
 
                 episode_rewards[agent] += rewards[agent]
                 # print(f"agent: {agent} - battery: {batteries[agent]} - obs: {new_observations[agent][0]}")
-                batteries[agent] += new_observations[agent][0]
+                
+                batteries[agent] += new_observations[agent][agent * 3]
                 backlogs[agent] += env.backlogs[agent]
                 
                 if(episode % int((num_episodes - 1) / 10) == 0):

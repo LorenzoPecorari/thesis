@@ -328,8 +328,9 @@ def battery_sampled_plotter(folder_path, timesteps, agents):
     
     
     plt.grid()
-    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
-    plt.tight_layout()
+    plt.legend()
+    # plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+    # plt.tight_layout()
     plt.savefig(f"battery_comparison_{agents}agents_sampled.pdf")
     plt.close()
     
@@ -395,8 +396,9 @@ def backlog_sampled_plotter(folder_path, timesteps, agents):
     
     
     plt.grid()
-    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
-    plt.tight_layout()
+    plt.legend()
+    # plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+    # plt.tight_layout()
     plt.savefig(f"backlog_comparison_{agents}agents_sampled.pdf")
     plt.close()
 
@@ -416,7 +418,7 @@ def file_cutter(folder_path, timesteps, frequency):
             # input(file.split('_'))
             # input(f"{file.split('_')[2]}_{file.split('_')[3]}_{file.split('_')[4]}.csv")
             
-            with open(path + f"{folder}_{file.split('_')[2]}_{file.split('_')[3]}_{file.split('_')[4]}.csv", "w+") as fw:
+            with open(path + f"{folder}_{file.split('_')[2]}_{file.split('_')[3]}_{file.split('_')[4]}_2agents.csv", "w+") as fw:
                 csvFileWrite = csv.writer(fw)
                 csvFileWrite.writerow(f"t{i}" for i in range(timesteps))
                 
@@ -435,7 +437,7 @@ if __name__ == "__main__":
     # battery_plotter(folder_path, 1440)
     battery_sampled_plotter(folder_path, 1440, agents)
     
-    # # backlogs_plotter(folder_path, 1440, 3)
+    # # # backlogs_plotter(folder_path, 1440, 3)
     backlog_sampled_plotter(folder_path, 1440, agents)
     
     rewards_plotter(folder_path, 4001, agents)
