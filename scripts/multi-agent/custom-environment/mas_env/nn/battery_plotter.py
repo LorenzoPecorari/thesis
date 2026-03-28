@@ -242,7 +242,7 @@ def triple_plot_battery_evolution_daily(episodes, day, interval, num_agents, con
         plt.savefig(f"./comparisons/battery/daily_evolution_{config_name}_{episodes}_{day}_{interval}_{num_agents}agents_cuda.pdf")
         plt.close()
         
-        print(f"✅ Saved daily evolution plot for {config_name}")
+        print(f"Saved daily evolution plot for {config_name}")
 
 
 double_compute_avg_battery_daily(4000, 355, 60, 5, "reduced_states", "sigmoid_z_score")

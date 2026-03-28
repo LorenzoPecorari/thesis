@@ -52,25 +52,24 @@ def compute_avg_rewards(episodes, day, interval, num_agents):
     plt.xlabel("Episodes")
     plt.ylabel("Rewards")
     
-    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"once_a_time", alpha = 1.0)
-    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"reduced_states", alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", alpha = 1.0)
 
     plt.grid()
-    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
-    plt.tight_layout()
+    plt.legend()
+    # plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+    # plt.tight_layout()
 
     plt.savefig(f"./comparisons/rewards/average_episodes_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
     plt.close()
     
-    
-
-def compute_avg_framerate(episodes, day, interval, num_agents):
+def compute_avg_matchings(episodes, day, interval, num_agents):
     rewards1 = [0 for episode in range(episodes+1)]
     rewards2 = [0 for episode in range(episodes+1)]
     
     
     for agent in range(num_agents):
-        with open(f'./once_a_time/csvs_plots/final/total_framerate_{battery_capacities[agent]}_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
+        with open(f'./once_a_time/20260313_164436/csvs/csvs_batch_256/matchings_{battery_capacities[agent]}_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
             csvFile = csv.reader(file)
             cnt = 0
             
@@ -82,7 +81,56 @@ def compute_avg_framerate(episodes, day, interval, num_agents):
         rewards1[id] /= num_agents
 
     for agent in range(num_agents):
-        with open(f'./reduced_states/csvs/csvs_batch_256/total_framerate_{battery_capacities[agent]}_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
+        with open(f'./reduced_states/csvs/csvs_batch_256/matchings_{battery_capacities[agent]}_{episodes}_{day}_{interval}_{num_agents}agents_cuda.csv') as file:
+            csvFile = csv.reader(file)
+            cnt = 0
+            
+            for line in csvFile:
+                rewards2[cnt] += float(line[0])
+                cnt += 1
+            
+    for id in range(episodes+1):
+        rewards2[id] /= num_agents
+             
+    window = 10
+    plt.suptitle("Average offloading matchings")
+    plt.title(f"Episodes: {episodes}, Day: {day}, Interval: {interval}, num_agents: {num_agents}, Mode: cuda")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Matchings")
+    
+    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", alpha = 1.0)
+
+    plt.grid()
+    plt.legend()
+    # plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+    # plt.tight_layout()
+
+    plt.savefig(f"./comparisons/average_matchings_episodes_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
+    plt.close()
+
+
+
+def compute_avg_framerate(episodes, day, interval, num_agents):
+    rewards1 = [0 for episode in range(episodes+1)]
+    rewards2 = [0 for episode in range(episodes+1)]
+    
+    
+    for agent in range(num_agents):
+        with open(f'./once_a_time/csvs_plots/final/total_framerate_{battery_capacities[agent]}_{episodes}_{day}_{interval}_{num_agents}agents_cuda_FIXED.csv') as file:
+            csvFile = csv.reader(file)
+            cnt = 0
+            
+            for line in csvFile:
+                rewards1[cnt] += float(line[0])
+                cnt += 1
+            
+    for id in range(episodes+1):
+        rewards1[id] /= num_agents
+
+    for agent in range(num_agents):
+        with open(f'./reduced_states/csvs/csvs_batch_256/total_framerate_{battery_capacities[agent]}_{episodes}_{day}_{interval}_{num_agents}agents_cuda_FIXED.csv') as file:
             csvFile = csv.reader(file)
             cnt = 0
             
@@ -100,12 +148,13 @@ def compute_avg_framerate(episodes, day, interval, num_agents):
     plt.xlabel("Episodes")
     plt.ylabel("Framerate")
     
-    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"once_a_time", alpha = 1.0)
-    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"reduced_states", alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", alpha = 1.0)
 
     plt.grid()
-    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
-    plt.tight_layout()
+    plt.legend()
+    # plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+    # plt.tight_layout()
     plt.savefig(f"./comparisons/framerates/average_framerates_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
     plt.close()
     
@@ -158,12 +207,13 @@ def compute_avg_backlog(episodes, day, interval, num_agents):
     plt.xlabel("Episode")
     plt.ylabel("Average Backlog")
     
-    plt.plot(sample_episodes, backlog1_samples, 'o-', label=f"once_a_time", alpha=1.0, markersize=8, linewidth=2)
-    plt.plot(sample_episodes, backlog2_samples[:-1], 's-', label=f"reduced_states", alpha=1.0, markersize=8, linewidth=2)
+    plt.plot(sample_episodes, backlog1_samples, 'o-', label=f"fine tuning", alpha=1.0, markersize=8, linewidth=2)
+    plt.plot(sample_episodes, backlog2_samples[:-1], 's-', label=f"heavy tuning", alpha=1.0, markersize=8, linewidth=2)
 
     plt.grid(alpha=0.3)
-    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
-    plt.tight_layout()
+    plt.legend()
+    # plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+    # plt.tight_layout()
 
     plt.savefig(f"./comparisons/backlog/average_backlog_sampled_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
     plt.close()
@@ -217,17 +267,19 @@ def compute_avg_battery(episodes, day, interval, num_agents):
     plt.xlabel("Episode")
     plt.ylabel("Average Battery")
     
-    plt.plot(sample_episodes, backlog1_samples, 'o-', label=f"once_a_time", alpha=1.0, markersize=8, linewidth=2)
-    plt.plot(sample_episodes, backlog2_samples[:-1], 's-', label=f"reduced_states", alpha=1.0, markersize=8, linewidth=2)
+    plt.plot(sample_episodes, backlog1_samples, 'o-', label=f"fine tuning", alpha=1.0, markersize=8, linewidth=2)
+    plt.plot(sample_episodes, backlog2_samples[:-1], 's-', label=f"heavy tuning", alpha=1.0, markersize=8, linewidth=2)
 
     plt.grid(alpha=0.3)
-    plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
-    plt.tight_layout()
+    plt.legend()
+    # plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
+    # plt.tight_layout()
 
     plt.savefig(f"./comparisons/backlog/average_battery_sampled_{episodes}_{day}_{interval}_{num_agents}agents_once-a-time_reduced_states_cuda.pdf")
     plt.close()
 
-compute_avg_rewards(1000, 355, 60, 10)
-compute_avg_framerate(1000, 355, 60, 10)
-compute_avg_backlog(1000, 355, 60, 10)
-compute_avg_battery(1000, 355, 60, 10)
+# compute_avg_rewards(1000, 355, 60, 10)
+# compute_avg_framerate(1000, 355, 60, 10)
+# compute_avg_backlog(1000, 355, 60, 10)
+# compute_avg_battery(1000, 355, 60, 10)
+compute_avg_matchings(1000, 355, 60, 10)

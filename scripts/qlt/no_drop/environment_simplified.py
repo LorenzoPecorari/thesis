@@ -193,7 +193,7 @@ class EnergyPVEnv(gymnasium.Env):
         
         self.irrad = self.get_irradiance()
         e_pv = self.get_pv_energy(self.irrad * self.max_irrad)
-        self.backlog += (15 * self.interval)
+        self.backlog += (self.arrival_rate * self.interval)
         
         reward = self.calculate_reward(action, e_pv)
         

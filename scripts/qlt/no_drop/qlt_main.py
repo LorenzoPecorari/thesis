@@ -471,12 +471,8 @@ def train_and_compare():
         }
         
         input(results_dict[battery_capacity]['framerate'])
-        
-        
         save_framerate_csv(battery_capacity, results_dict[battery_capacity]['framerate'])
-    
-        
-        print(f"\n✓ Agent {battery_capacity}Wh training complete!")
+        print(f"\nAgent {battery_capacity}Wh training complete!")
     
     # Plot comparisons
     plot_all_comparisons(results_dict)
@@ -575,7 +571,7 @@ def plot_comparison(results_dict, metric, title, ylabel, filename):
     plt.savefig(filename)
     plt.close()
     
-    print(f"✓ Saved: {filename}")
+    print(f"Saved: {filename}")
 
 
 # ============================================================================
@@ -583,9 +579,6 @@ def plot_comparison(results_dict, metric, title, ylabel, filename):
 # ============================================================================
 
 def plot_all_subplots(results_dict):
-    """
-    Create a 2x2 subplot grid with all comparisons.
-    """
     
     window = 10
     
@@ -628,7 +621,7 @@ def plot_all_subplots(results_dict):
     plt.savefig('all_metrics_comparison_qlt.pdf')
     plt.close()
     
-    print(f"✓ Saved: all_metrics_comparison_qlt.pdf")
+    print(f"Saved: all_metrics_comparison_qlt.pdf")
 
 
 def save_framerate_csv(battery_capacity, framerate_data):
@@ -640,7 +633,7 @@ def save_framerate_csv(battery_capacity, framerate_data):
         for fps in framerate_data:
             file.write(f"{float(fps)}\n")
     
-    print(f"✓ Saved: {filename}")
+    print(f"Saved: {filename}")
 
 
 def plot_framerate(folder_path):
@@ -677,7 +670,42 @@ def plot_framerate(folder_path):
     plt.tight_layout()
     plt.savefig(f"./comparisons/fps_comparison_sa.pdf")
     plt.close()
+    
+def plot_backlogs(folder_path):
+    elements = os.listdir(folder_path)
+    print(elements)
+        
+    framerates = [[] for i in range(len(elements))]
 
+    for f in range(len(elements)):
+        print(f'{folder_path}/{elements[f]}')
+        with open(f'{folder_path}/{elements[f]}') as file:
+            csvFile = csv.reader(file)
+            
+            for line in csvFile:
+                framerates[f].append(float(line[0]))
+            
+            # rewards[f] /= cnt         
+            
+    print(framerates)       
+    
+    window = 50
+    plt.suptitle("Average backlog")
+    plt.title(f"Episodes: {len(framerates[0])-1}, Day: 355, Interval: 60")
+    
+    plt.xlabel("Episodes")
+    plt.ylabel("Backlog")
+    
+    for id in range(len(elements)):
+        plt.plot(framerates[id], label = f"raw {elements[id].split('_')[1]}", alpha = 0.2)
+        plt.plot(range(window - 1, len(framerates[id])), np.convolve(framerates[id], np.ones(window)/window, mode='valid'), label = f"smooth {elements[id].split('_')[1]}", alpha = 1.0)
+
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"./comparisons/backlog_comparison_sa.pdf")
+    plt.close()
+    
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
@@ -685,6 +713,7 @@ def plot_framerate(folder_path):
 if __name__ == "__main__":
     # train_and_compare()
     plot_framerate("./csv_framerates")
+    plot_backlogs("./csv_backlogs")
     
     # results_dict = {}
     # for battery_capacity in battery_capacities:
