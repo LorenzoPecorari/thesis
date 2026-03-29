@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 import csv
 import os
 
-agents = 2
+agents = 3
 timesteps = 1440
 episodes = 4001
 
-folder_path = "./csv_n2"
-# folder_path = "./csv_avg_plots"
+# folder_path = "./csv_n2"
+folder_path = "./csv_avg_plots"
 
 def rewards_plotter(folder_path, episodes, agents):
     # agents = 1
@@ -318,7 +318,7 @@ def battery_sampled_plotter(folder_path, timesteps, agents):
     window = 10
     plt.suptitle("Multi-agent : average battery")
     
-    plt.xlabel("Episodes/400")
+    plt.xlabel("Episodes * 400")
     plt.ylabel("Battery")
     
     for i in configurational_backlogs.keys():
@@ -386,7 +386,7 @@ def backlog_sampled_plotter(folder_path, timesteps, agents):
     window = 10
     plt.suptitle("Multi-agent : average backlog")
     
-    plt.xlabel("Episodes/400")
+    plt.xlabel("Episodes * 400")
     plt.ylabel("Backlog")
     
     for i in configurational_backlogs.keys():

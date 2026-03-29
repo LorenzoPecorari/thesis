@@ -52,8 +52,8 @@ def compute_avg_rewards(episodes, day, interval, num_agents):
     plt.xlabel("Episodes")
     plt.ylabel("Rewards")
     
-    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", alpha = 1.0)
-    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", linewidth = 2.0,  alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", linewidth = 2.0, alpha = 1.0)
 
     plt.grid()
     plt.legend()
@@ -99,8 +99,8 @@ def compute_avg_matchings(episodes, day, interval, num_agents):
     plt.xlabel("Episodes")
     plt.ylabel("Matchings")
     
-    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", alpha = 1.0)
-    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", linewidth = 2.0,  alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", linewidth = 2.0, alpha = 1.0)
 
     plt.grid()
     plt.legend()
@@ -148,8 +148,8 @@ def compute_avg_framerate(episodes, day, interval, num_agents):
     plt.xlabel("Episodes")
     plt.ylabel("Framerate")
     
-    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", alpha = 1.0)
-    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards1)), np.convolve(rewards1, np.ones(window)/window, mode='valid'), label = f"fine tuning", linewidth = 2.0, alpha = 1.0)
+    plt.plot(range(window - 1, len(rewards2)), np.convolve(rewards2, np.ones(window)/window, mode='valid'), label = f"heavy tuning", linewidth = 2.0, alpha = 1.0)
 
     plt.grid()
     plt.legend()
@@ -204,7 +204,7 @@ def compute_avg_backlog(episodes, day, interval, num_agents):
     
     sample_episodes = [i * int(episodes / 10) for i in range(len(backlog2_samples)-1)]
         
-    plt.xlabel("Episode")
+    plt.xlabel("Episode * 400")
     plt.ylabel("Average Backlog")
     
     plt.plot(sample_episodes, backlog1_samples, 'o-', label=f"fine tuning", alpha=1.0, markersize=8, linewidth=2)
@@ -264,7 +264,7 @@ def compute_avg_battery(episodes, day, interval, num_agents):
     
     sample_episodes = [i * int(episodes / 10) for i in range(len(backlog2_samples)-1)]
         
-    plt.xlabel("Episode")
+    plt.xlabel("Episode * 400")
     plt.ylabel("Average Battery")
     
     plt.plot(sample_episodes, backlog1_samples, 'o-', label=f"fine tuning", alpha=1.0, markersize=8, linewidth=2)
@@ -280,6 +280,6 @@ def compute_avg_battery(episodes, day, interval, num_agents):
 
 # compute_avg_rewards(1000, 355, 60, 10)
 # compute_avg_framerate(1000, 355, 60, 10)
-# compute_avg_backlog(1000, 355, 60, 10)
-# compute_avg_battery(1000, 355, 60, 10)
-compute_avg_matchings(1000, 355, 60, 10)
+compute_avg_backlog(1000, 355, 60, 10)
+compute_avg_battery(1000, 355, 60, 10)
+# compute_avg_matchings(1000, 355, 60, 10)
