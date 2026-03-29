@@ -314,7 +314,7 @@ class CustomEnvironment(ParallelEnv):
             # obs.append(avg_backlog)
             # obs.append(max_backlog)        
             
-            observations[agent] = obs
+            observations[agent] = np.array(obs, dtype=np.float32)
             # print(observations[agent])
 
         infos = {a: {} for a in self.agents}
