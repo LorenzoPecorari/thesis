@@ -39,6 +39,7 @@ power_max = 6.0
 
 w = 1.0
 
+seed = "fixed_winter"
 train_freq = 16
 
 if __name__ == "__main__":
@@ -58,7 +59,8 @@ if __name__ == "__main__":
         power_idle,
         power_max,
         train_freq,
-        w
+        w,
+        seed
         )
     
     trainer.train()
