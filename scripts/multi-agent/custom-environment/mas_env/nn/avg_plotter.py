@@ -3,12 +3,218 @@ import matplotlib.pyplot as plt
 import csv
 import os
 
-agents = 3
+agents = 5
 timesteps = 1440
 episodes = 4001
 
 # folder_path = "./csv_n2"
 folder_path = "./csv_avg_plots"
+def rewards_compare(folder_path, episodes):
+    agents_list = ["2agents", "3agents", "5agents"]
+    window = 100
+
+    global_means = {}
+
+    for agents_tag in agents_list:
+        n = int(agents_tag.replace("agents", ""))
+        accumulated = [0.0 for _ in range(episodes)]
+        total_agents_counted = 0
+
+        for design in os.listdir(folder_path):
+            inner_dir = os.path.join(folder_path, design, "rewards")
+            if not os.path.isdir(inner_dir):
+                continue
+
+            for e in os.listdir(inner_dir):
+                if "rewards" in e and agents_tag in e:
+                    with open(os.path.join(inner_dir, e)) as f:
+                        idx = 0
+                        for line in csv.reader(f):
+                            if idx < episodes:
+                                accumulated[idx] += float(line[0])
+                                idx += 1
+                    total_agents_counted += 1
+
+        if total_agents_counted == 0:
+            print(f"no data for {agents_tag}")
+            continue
+
+        global_means[agents_tag] = [v / total_agents_counted for v in accumulated]
+
+    plt.figure()
+    plt.suptitle("Multi-agent : average rewards")
+    plt.xlabel("Episodes")
+    plt.ylabel("Rewards")
+
+    for agents_tag, data in global_means.items():
+        # plt.plot(data, alpha=0.2)
+        plt.plot(
+            range(window - 1, len(data)),
+            np.convolve(data, np.ones(window) / window, mode="valid"),
+            label=f"{agents_tag} smooth",
+            linewidth=2.0,
+            alpha=1.0
+        )
+
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("rewards_comparison_by_nagents.pdf")
+    plt.close()
+    print("saved: rewards_comparison_by_nagents.pdf")
+        
+def framerate_compare(folder_path, episodes):
+    agents_list = ["2agents", "3agents", "5agents"]
+    window = 100
+    global_means = {}
+
+    for agents_tag in agents_list:
+        accumulated = [0.0 for _ in range(episodes)]
+        total_counted = 0
+
+        for design in os.listdir(folder_path):
+            inner_dir = os.path.join(folder_path, design, "framerate")
+            if not os.path.isdir(inner_dir):
+                continue
+
+            for e in os.listdir(inner_dir):
+                if "framerate" in e and agents_tag in e:
+                    with open(os.path.join(inner_dir, e)) as f:
+                        idx = 0
+                        for line in csv.reader(f):
+                            if idx < episodes:
+                                accumulated[idx] += float(line[0])
+                                idx += 1
+                    total_counted += 1
+
+        if total_counted == 0:
+            print(f"no data for {agents_tag}")
+            continue
+
+        global_means[agents_tag] = [v / total_counted for v in accumulated]
+
+    plt.figure()
+    plt.suptitle("Multi-agent : average framerate")
+    plt.xlabel("Episodes")
+    plt.ylabel("Framerate")
+
+    for agents_tag, data in global_means.items():
+        # plt.plot(data, alpha=0.2)
+        plt.plot(
+            range(window - 1, len(data)),
+            np.convolve(data, np.ones(window) / window, mode="valid"),
+            label=f"{agents_tag} smooth",
+            linewidth=2.0,
+            alpha=1.0
+        )
+
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("framerate_comparison_by_nagents.pdf")
+    plt.close()
+    print("saved: framerate_comparison_by_nagents.pdf")
+
+
+def backlog_compare(folder_path, timesteps):
+    agents_list = ["2agents", "3agents", "5agents"]
+    samplings = 11
+    global_means = {}
+
+    for agents_tag in agents_list:
+        n = int(agents_tag.replace("agents", ""))
+        accumulated = [0.0 for _ in range(samplings)]
+        total_counted = 0
+
+        for design in os.listdir(folder_path):
+            inner_dir = os.path.join(folder_path, design, "backlog")
+            if not os.path.isdir(inner_dir):
+                continue
+
+            for e in os.listdir(inner_dir):
+                if agents_tag in e:
+                    with open(os.path.join(inner_dir, e)) as f:
+                        idx = 0
+                        for line in csv.reader(f):
+                            if idx > 0 and (idx - 1) < samplings:
+                                for val in line:
+                                    accumulated[idx - 1] += float(val)
+                            idx += 1
+                    total_counted += 1
+
+        if total_counted == 0:
+            print(f"no data for {agents_tag}")
+            continue
+
+        global_means[agents_tag] = [
+            v / (total_counted * timesteps) for v in accumulated
+        ]
+
+    plt.figure()
+    plt.suptitle("Multi-agent : average backlog")
+    plt.xlabel("Episodes/400")
+    plt.ylabel("Backlog")
+
+    for agents_tag, data in global_means.items():
+        plt.plot(data, "o-", label=f"{agents_tag}", linewidth=2.0, alpha=1.0)
+
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("backlog_comparison_by_nagents.pdf")
+    plt.close()
+    print("saved: backlog_comparison_by_nagents.pdf")
+
+
+def battery_compare(folder_path, timesteps):
+    agents_list = ["2agents", "3agents", "5agents"]
+    samplings = 11
+    global_means = {}
+
+    for agents_tag in agents_list:
+        n = int(agents_tag.replace("agents", ""))
+        accumulated = [0.0 for _ in range(samplings)]
+        total_counted = 0
+
+        for design in os.listdir(folder_path):
+            inner_dir = os.path.join(folder_path, design, "battery")
+            if not os.path.isdir(inner_dir):
+                continue
+
+            for e in os.listdir(inner_dir):
+                if agents_tag in e:
+                    with open(os.path.join(inner_dir, e)) as f:
+                        idx = 0
+                        for line in csv.reader(f):
+                            if idx > 0 and (idx - 1) < samplings:
+                                for val in line:
+                                    accumulated[idx - 1] += float(val)
+                            idx += 1
+                    total_counted += 1
+
+        if total_counted == 0:
+            print(f"no data for {agents_tag}")
+            continue
+
+        global_means[agents_tag] = [
+            v / (total_counted * timesteps) for v in accumulated
+        ]
+
+    plt.figure()
+    plt.suptitle("Multi-agent : average battery")
+    plt.xlabel("Episodes/400")
+    plt.ylabel("Battery")
+
+    for agents_tag, data in global_means.items():
+        plt.plot(data, "o-", label=f"{agents_tag}", linewidth=2.0, alpha=1.0)
+
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("battery_comparison_by_nagents.pdf")
+    plt.close()
+    print("saved: battery_comparison_by_nagents.pdf")
+        
 
 def rewards_plotter(folder_path, episodes, agents):
     # agents = 1
@@ -435,12 +641,17 @@ def file_cutter(folder_path, timesteps, frequency):
     
 if __name__ == "__main__":
     # battery_plotter(folder_path, 1440)
-    battery_sampled_plotter(folder_path, 1440, agents)
+    # battery_sampled_plotter(folder_path, 1440, agents)
     
     # # # backlogs_plotter(folder_path, 1440, 3)
-    backlog_sampled_plotter(folder_path, 1440, agents)
+    # backlog_sampled_plotter(folder_path, 1440, agents)
     
-    rewards_plotter(folder_path, 4001, agents)
-    framerate_plotter(folder_path, 4001, agents)
+    # rewards_plotter(folder_path, 4001, agents)
+    # framerate_plotter(folder_path, 4001, agents)
 
     # file_cutter(folder_path + "/Tabular/", timesteps, 400)
+    
+    rewards_compare(folder_path, 4001)    
+    battery_compare(folder_path, 4001)
+    backlog_compare(folder_path, 4001)
+    framerate_compare(folder_path, 4001)

@@ -404,9 +404,9 @@ time_bins = 15
 alpha = 0.05
 gamma = 0.99
 eps_min = 0.05
-eps_dec = 0.99
+eps_dec = 0.9985
 eps_init = 1.0
-episodes = 2000
+episodes = 4000
 
 # ============================================================================
 # TRAINING FUNCTION
@@ -679,12 +679,13 @@ def plot_backlogs(folder_path):
 
     for f in range(len(elements)):
         print(f'{folder_path}/{elements[f]}')
-        with open(f'{folder_path}/{elements[f]}') as file:
-            csvFile = csv.reader(file)
-            
-            for line in csvFile:
-                framerates[f].append(float(line[0]))
-            
+        if("4000" in f'{folder_path}/{elements[f]}'):
+            with open(f'{folder_path}/{elements[f]}') as file:
+                csvFile = csv.reader(file)
+                
+                for line in csvFile:
+                    framerates[f].append(float(line[0]))
+                
             # rewards[f] /= cnt         
             
     print(framerates)       
@@ -698,7 +699,7 @@ def plot_backlogs(folder_path):
     
     for id in range(len(elements)):
         plt.plot(framerates[id], label = f"raw {elements[id].split('_')[1]}", alpha = 0.2)
-        plt.plot(range(window - 1, len(framerates[id])), np.convolve(framerates[id], np.ones(window)/window, mode='valid'), label = f"smooth {elements[id].split('_')[1]}", alpha = 1.0)
+        # plt.plot(range(window - 1, len(framerates[id])), np.convolve(framerates[id], np.ones(window)/window, mode='valid'), label = f"smooth {elements[id].split('_')[1]}", alpha = 1.0)
 
     plt.grid()
     plt.legend()
@@ -712,7 +713,7 @@ def plot_backlogs(folder_path):
 
 if __name__ == "__main__":
     # train_and_compare()
-    plot_framerate("./csv_framerates")
+    # plot_framerate("./csv_framerates")
     plot_backlogs("./csv_backlogs")
     
     # results_dict = {}
