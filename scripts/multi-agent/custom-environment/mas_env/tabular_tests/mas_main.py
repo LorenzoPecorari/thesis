@@ -7,16 +7,14 @@ from custom_environment import CustomEnvironment
 from tabular_agent import TabularAgent
 
 # function for initial testing of environment
-def test_policy(env, num_episodes):
+def test_policy(env, num_episodes, seed):
     final_rewards = []
     
     agents = []
     framerates  =[[] for i in range(0, env._num_agents)]
     fs = [[] for i in range(0, env._num_agents)]
     hs = [[] for i in range(0, env._num_agents)]
-    
-    # num_episodes = 8001
-    
+        
     for agent in env.possible_agents:
         agents.append(TabularAgent(agent, 
                                    env.battery_capacities[agent],
@@ -36,7 +34,6 @@ def test_policy(env, num_episodes):
                                    alpha=0.05,
                                    gamma=0.99,
                                    eps_min=0.05,
-                                #    eps_dec=0.839,     # ~ 33 episodes   
                                    eps_dec=0.9988,      # ~ 2500 episodes
                                 #    eps_dec=0.9985,    # ~ 2000 episodes
                                 #    eps_dec=0.997,     # ~ 1000 episodes
@@ -58,11 +55,6 @@ def test_policy(env, num_episodes):
     backlogs_daily = [[[] for j in range(0, math.ceil(num_episodes / int((num_episodes - 1) / 10)))] for i in range(0, env._num_agents)]
 
     actual_offloading = [[] for i in range(0, env._num_agents)]
-
-    # reward_batteries = [[] for i in range(0, env._num_agents)]
-    # reward_frames = [[] for i in range(0, env._num_agents)]
-    # reward_cooperation = [[] for i in range(0, env._num_agents)]
-    # reward_backlog = [[] for i in range(0, env._num_agents)]
     
     sent = [[] for i in range(0, env._num_agents)]
     received = [[] for i in range(0, env._num_agents)]    
@@ -75,8 +67,7 @@ def test_policy(env, num_episodes):
         send_hi = [[] for i in range(0, env._num_agents)]
         recv_hi = [[] for i in range(0, env._num_agents)]
     
-        observations, _ = env.reset()
-        # input(observations)
+        observations, _ = env.reset(seed)
         episode_rewards = {agent: 0 for agent in env.possible_agents}
         step = 0
         
@@ -84,11 +75,6 @@ def test_policy(env, num_episodes):
         backlogs = [0.0 for i in range(0, env._num_agents)]
         
         while env.agents:
-            # print(f"\n === Step: {step} ===")
-            # for elem in observations:
-                # print(f"observation {elem}: {observations[elem]}")
-            
-            # print(f"observations: {observations}")
             
             actions = {
                 # agent: [0, 0, 0, 0]
@@ -96,16 +82,11 @@ def test_policy(env, num_episodes):
                 for agent_id in env.agents
             }
             
-            # print(f"chosen actions: {actions}")
-            
             new_observations, rewards, terminations, truncations, infos = env.step(actions)
-            # print(f"Observations: {observations}\nRewards: {rewards}\nTerminations:{terminations}\nTruncations: {truncations}\nInfos: {infos}\n")
-            # print(f"Observations: {observations}\nNew Observations: {new_observations}")
             
             for agent in rewards:
 
                 episode_rewards[agent] += rewards[agent]
-                # print(f"agent: {agent} - battery: {batteries[agent]} - obs: {new_observations[agent][0]}")
                 
                 batteries[agent] += new_observations[agent][agent * 3]
                 backlogs[agent] += env.backlogs[agent]
@@ -133,14 +114,7 @@ def test_policy(env, num_episodes):
             # update agents at each iteration
             for id in range(0, env._num_agents):
                 agents[id].update_table(observations[id], new_observations[id], actions[id], rewards[id])
-                # print(f"agent: {id} - {actions[id][0]} , {actions[id][3]}")
-                # input()
-                # if((actions[id][0] + actions[id][3]) > proc_rate):
-                #     framerates_temp[id] += (actions[id][0])
-                # else:
-                #     framerates_temp[id] += (actions[id][0] + actions[id][3])
-                    
-
+            
             observations = new_observations    
                 
             step += 1
@@ -157,9 +131,9 @@ def test_policy(env, num_episodes):
             fs[agent].append(local_fps)
                         
             if(env.hs_counter[agent] > 0):
-                offload_fps = env.hs[agent] / env.hs_counter[agent]
+                offload_fps = env.hs[agent] / step
+                # offload_fps = env.hs[agent] / env.hs_counter[agent] # <- decomment for avg over matchings!
                 hs[agent].append(offload_fps)
-                # input(f"{agent},{offload_fps}, {env.hs[agent]}, {env.hs_counter[agent]}")
                 
             else:
                 offload_fps = 0.0
@@ -168,60 +142,35 @@ def test_policy(env, num_episodes):
             framerates[agent].append(local_fps + offload_fps)
             framerates_to_print.append([round(local_fps,2), round(offload_fps,2)])
             
-            # fs[agent].append(env.fs[agent] / step)
-            # if(env.hs_counter[agent] > 0):
-            #     hs[agent].append(env.hs[agent] / env.hs_counter[agent])
-            # else:
-            #     hs[agent].append(0.0)
-
             battery_levels[agent].append((batteries[agent] / step))
-            # # print(f"agent: {agent} - battery_level: {batteries[agent]} - battery: {battery_levels[agent]}")
             batteries[agent] = []
             
             backlogs_average[agent].append(backlogs[agent] / step)
-            # backlogs[agent] = []
-
-            # if(len(hs[agent]) > 0):
-            #     framerates_to_print.append([round(float(fs[agent][-1]), 3), round(float(hs[agent][-1]), 3)])                        
-            # else:
-            #     framerates_to_print.append([round(float(fs[agent][-1]), 3), 0.0])                                        
-            # # framerates_to_print.append([round(float(fs[agent][-1]), 3), round(float(send_hi[agent][0]/send_hi[agent][1]), 3), round(float(recv_hi[agent][0]/recv_hi[agent][1]), 3), round(float(hs[agent][-1]), 3)])
-            # framerates[agent].append(framerates_temp[agent] / step)
-            
             env.fs[agent] = 0
             env.hs[agent] = 0
             env.hs_counter[agent] = 0
-            
-            # reward_batteries[agent].append(env.r_battery[agent])
-            # reward_frames[agent].append(env.r_frames[agent])
-            # reward_cooperation[agent].append(env.r_cooperation[agent])
-            # reward_backlog[agent].append(env.r_backlog[agent])
-            
-            # env.r_battery[agent] = 0
-            # env.r_frames[agent] = 0
-            # env.r_cooperation[agent] = 0
-            # env.r_backlog[agent] = 0
-            
+                        
             if(len(send_hi[agent]) > 0 and len(recv_hi[agent])):
                 sent[agent].append(send_hi[agent])
                 received[agent].append(recv_hi[agent])
                 
             if(len(off[agent])):
                 actual_offloading[agent].append(off[agent])
-                # input(actual_offloading)
-            
-            # input(actual_offloading)
             
             send_hi[agent] = []
             recv_hi[agent] = []
             
             agents[agent].update_epsilon()
         
+        for elem in episode_rewards:
+            episode_rewards[elem] = round(episode_rewards[elem], 2)
+        
+        for i in range(0, len(framerates_to_print)):
+            for j in range(0, len(framerates_to_print[i])):
+                framerates_to_print[i][j] = round(float(framerates_to_print[i][j]), 2)
+        
         # if(episode % 100 == 0):
         print(f"Episode: {episode+1}/{num_episodes} - rewards: {episode_rewards} - framerates: {framerates_to_print}")
-        
-    # for agent in range(0, env._num_agents):
-    #     agents[agent].save_table() 
         
     plot_rewards(rewards_for_plot)
     plot_local_framerate(fs)
@@ -235,11 +184,6 @@ def test_policy(env, num_episodes):
     plot_backlog_daily(backlogs_daily)
     
     plot_actual_offloading_daily(actual_offloading)
-    
-    # plot_rewards_batteries(reward_batteries)
-    # plot_rewards_backlog(reward_backlog)
-    # plot_rewards_cooperation(reward_cooperation)
-    # plot_rewards_frames(reward_frames)
     
     plot_recvd_daily(received)
     plot_sent_daily(sent)
@@ -280,8 +224,6 @@ def save_results(batteries, rewards, backlogs, framerates, num_episodes, num_age
 
 def plot_rewards(rewards):
     
-    # print(rewards)
-    
     window = 10
     plt.suptitle("Multi-agent : rewards")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}, interval: {proc_interval}s")
@@ -290,12 +232,10 @@ def plot_rewards(rewards):
     plt.ylabel("Rewards")
     
     for i in range(0, env._num_agents):
-        # print(rewards[i])
         plt.plot(range(window - 1, len(rewards[i])), np.convolve(rewards[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
         plt.plot(rewards[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
     
     plt.grid()
-    # plt.ylim(-10, 500)
     plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
     plt.tight_layout()
     plt.savefig(f"rewards_plot_{num_episodes - 1}_{env.episode}_{proc_interval}_{w}_{env._num_agents}agents.pdf")
@@ -307,10 +247,9 @@ def plot_local_framerate(fs):
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}, interval: {proc_interval}s")
     
     plt.xlabel("Episodes")
-    plt.ylabel("Rewards")
+    plt.ylabel("Framerate")
     
     for i in range(0, env._num_agents):
-        # print(rewards[i])
         plt.plot(range(window - 1, len(fs[i])), np.convolve(fs[i], np.ones(window)/window, mode='valid'), label = f"smooth {batteries[i]}Wh", alpha = 1.0)
         plt.plot(fs[i], label = f"raw {batteries[i]}Wh", alpha = 0.3)
     
@@ -364,7 +303,7 @@ def plot_offloading_framerate(fs):
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}, interval: {proc_interval}s")
     
     plt.xlabel("Episodes")
-    plt.ylabel("Rewards")
+    plt.ylabel("Framerate")
     
     for i in range(0, env._num_agents):
         # print(rewards[i])
@@ -383,7 +322,7 @@ def plot_backlogs(backlogs):
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}, interval: {proc_interval}s")
     
     plt.xlabel("Timesteps")
-    plt.ylabel("Rewards")
+    plt.ylabel("Backlog")
     
     for i in range(0, env._num_agents):
         # print(rewards[i])
@@ -469,7 +408,7 @@ def plot_actual_offloading_daily(data):
         plt.title(f"B: {env.battery_capacities[elem] / 3600} - P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}, interval: {proc_interval}s")
         
         plt.xlabel("Timestep")
-        plt.ylabel("FPS")
+        plt.ylabel("Framerate")
         for i in range(0, len(data[elem])):
             # print(rewards[i])
             plt.plot(range(window - 1, len(data[elem][i])), np.convolve(data[elem][i], np.ones(window)/window, mode='valid'), label = f"{i * (int((num_episodes-1) / 10))}-th episode", alpha = 1.0)
@@ -481,9 +420,6 @@ def plot_actual_offloading_daily(data):
         plt.close()
 
 def plot_rewards_batteries(rewards):
-    
-    # print(rewards)
-    
     window = 10
     plt.suptitle("Multi-agent : rewards")
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}, interval: {proc_interval}s")
@@ -555,7 +491,7 @@ def plot_rewards_backlog(rewards):
     plt.title(f"P_i = {power_idle}, P_f = {power_max}, fps = {proc_rate}, interval: {proc_interval}s")
     
     plt.xlabel("Episodes")
-    plt.ylabel("Rewards")
+    plt.ylabel("Backlog")
     
     for i in range(0, env._num_agents):
         # print(rewards[i])
@@ -625,17 +561,15 @@ if __name__ == "__main__":
     power_idle = 2.6
     power_max = 6.0
 
+    seed = "fixed_winter"
+    
     # batteries = [25, 100]
     # panel_surfaces = [1.0, 0.5]
 
-    
     batteries = [25, 100, 50]
     panel_surfaces = [1.0, 0.5, 0.75]
     
     w = 1
-    
-    # batteries = [25, 100, 50]
-    # panel_surfaces = [1.0, 0.5, 0.75]
     
     # irradiance datafiles
     # irradiance_datapaths = [
@@ -651,6 +585,6 @@ if __name__ == "__main__":
     ]
     
     # env constructor
-    env = CustomEnvironment(num_agents, irradiance_datapaths, delta_time, proc_interval, proc_rate, arrival_rate, batteries, panel_surfaces, power_idle, power_max, w)
-    test_policy(env, num_episodes)
+    env = CustomEnvironment(num_agents, irradiance_datapaths, delta_time, proc_interval, proc_rate, arrival_rate, batteries, panel_surfaces, power_idle, power_max, w, seed)
+    test_policy(env, num_episodes, seed)
     

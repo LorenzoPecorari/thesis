@@ -79,6 +79,7 @@ w = 1.0
 train_freq = 16
 batch_size = 256
 
+seed = "fixed_winter"
 mode = 'cuda'
 
 if __name__ == "__main__":
@@ -100,8 +101,8 @@ if __name__ == "__main__":
         train_freq,
         w,
         mode,
-        batch_size
+        batch_size,
+        seed
         )
     
-    # trainer.train_with_profiling()
     trainer1.train()

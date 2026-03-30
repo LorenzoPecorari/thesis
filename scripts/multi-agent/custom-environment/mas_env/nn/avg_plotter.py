@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import csv
 import os
 
-agents = 5
+agents = 2
 timesteps = 1440
 episodes = 4001
 
@@ -260,10 +260,8 @@ def rewards_plotter(folder_path, episodes, agents):
     plt.ylabel("Rewards")
     
     for i in rewards.keys():
-        # input(len(rewards[i]))
         # plt.plot(rewards[i], label = f"{i}", alpha = 0.3)
         plt.plot(range(window - 1, len(rewards[i])), np.convolve(rewards[i], np.ones(window)/window, mode='valid'), label = f"{i} smooth", linewidth = 2.0, alpha = 1.0)
-        # plt.plot(rewards[i],  alpha = 0.3)
     
     plt.grid()
     plt.legend()
@@ -273,7 +271,6 @@ def rewards_plotter(folder_path, episodes, agents):
     plt.close()
     
 def framerate_plotter(folder_path, episodes, agents):
-    # agents = 1
     elements = os.listdir(folder_path)
     
     rewards = {elem: [0 for i in range(episodes)] for elem in elements}
@@ -282,7 +279,6 @@ def framerate_plotter(folder_path, episodes, agents):
     for elem in elements:
         inenr_dir = folder_path + "/" + elem + "/framerate/"
         elems = os.listdir(inenr_dir)
-        # agents = len(elems)
         
         agent_id = 0
         for e in elems:
@@ -316,10 +312,8 @@ def framerate_plotter(folder_path, episodes, agents):
     plt.ylabel("Framerate")
     
     for i in rewards.keys():
-        # input(len(rewards[i]))
         # plt.plot(rewards[i], label = f"{i}", alpha = 0.3)
         plt.plot(range(window - 1, len(rewards[i])), np.convolve(rewards[i], np.ones(window)/window, mode='valid'), label = f"{i} smooth", linewidth = 2.0, alpha = 1.0)
-        # plt.plot(rewards[i], alpha = 0.3)
     
     plt.grid()
     plt.legend()
@@ -331,7 +325,6 @@ def framerate_plotter(folder_path, episodes, agents):
  
 def backlogs_plotter(folder_path, timesteps, agents):
     elements = os.listdir(folder_path)
-    # agents = 1
     samplings = 11
     
     print(elements)
@@ -345,11 +338,8 @@ def backlogs_plotter(folder_path, timesteps, agents):
         elems = os.listdir(inner_path)
         
         if("backlog" in elems):
-            path = inner_path + "/backlog/"
-            
-            # agents = len(os.listdir(path))
+            path = inner_path + "/backlog/"            
             agent_id = 0
-            
             backlogs = [0 for j in range(timesteps)]
             
             for filename in os.listdir(path):
@@ -379,8 +369,6 @@ def backlogs_plotter(folder_path, timesteps, agents):
             configurational_backlogs[elem] = backlogs
     
         
-    # print(configurational_backlogs)
-    
         window = 10
         plt.suptitle("Multi-agent : average obacklogs")
         
@@ -389,7 +377,6 @@ def backlogs_plotter(folder_path, timesteps, agents):
         
         for i in configurational_backlogs.keys():
             # print(rewards[i])
-            # plt.plot(range(window - 1, len(configurational_backlogs[i])), np.convolve(len(configurational_backlogs[i]), np.ones(window)/window, mode='valid'), label = f"i", linewidth = 2.0, alpha = 1.0)
             plt.plot(configurational_backlogs[i], label = f"{i}", linewidth = 2.0, alpha = 1.0)
         
         plt.grid()
@@ -400,7 +387,6 @@ def backlogs_plotter(folder_path, timesteps, agents):
 
 def battery_plotter(folder_path, timesteps, agents):
     elements = os.listdir(folder_path)
-    # agents = 1
     samplings = 11
     
     print(elements)
@@ -416,7 +402,6 @@ def battery_plotter(folder_path, timesteps, agents):
         if("backlog" in elems):
             path = inner_path + "/battery/"
             
-            # agents = len(os.listdir(path))
             agent_id = 0
             
             backlogs = [0 for j in range(timesteps)]
@@ -443,8 +428,6 @@ def battery_plotter(folder_path, timesteps, agents):
             backlogs[i] /= (agents * samplings)
             
         configurational_backlogs[elem] = backlogs
-        
-    # print(configurational_backlogs)
     
         window = 10
         plt.suptitle("Multi-agent : average battery")
@@ -454,7 +437,6 @@ def battery_plotter(folder_path, timesteps, agents):
         
         for i in configurational_backlogs.keys():
             # print(rewards[i])
-            # plt.plot(range(window - 1, len(configurational_backlogs[i])), np.convolve(len(configurational_backlogs[i]), np.ones(window)/window, mode='valid'), label = f"i", linewidth = 2.0, alpha = 1.0)
             plt.plot(configurational_backlogs[i], label = f"{i}", linewidth = 2.0, alpha = 1.0)
         
         plt.grid()
@@ -465,14 +447,12 @@ def battery_plotter(folder_path, timesteps, agents):
         
 def battery_sampled_plotter(folder_path, timesteps, agents):
     elements = os.listdir(folder_path)
-    # agents = 1
     samplings = 11
     
     print(elements)
     configurational_backlogs = {}
     
     for elem in elements:
-        # input(elem)
         backlogs = {}
         inner_path = folder_path + "/" + elem
         
@@ -482,14 +462,9 @@ def battery_sampled_plotter(folder_path, timesteps, agents):
         if("battery" in elems):
             path = inner_path + "/battery/"
             
-            # agents = len(os.listdir(path))
-            
             backlogs = [0 for j in range(samplings)]
             
             for filename in os.listdir(path):
-                # input(agents)
-                # print(filename, (str(agents) + "agents") in filename)
-                # input()
                 
                 if(str(agents) + "agents") in filename:
                     print(filename, (str(agents) + "agents") in filename)
@@ -498,9 +473,7 @@ def battery_sampled_plotter(folder_path, timesteps, agents):
                         csvFile = csv.reader(f)
                         idx = 0
                         
-                        for line in csvFile:
-                            # input(backlogs)
-                        
+                        for line in csvFile:                        
                             if(idx > 0):
                                 for e in line:
                                     backlogs[idx-1] += float(e)
@@ -514,11 +487,6 @@ def battery_sampled_plotter(folder_path, timesteps, agents):
                         
         if(agent_id != 0):
             configurational_backlogs[elem] = backlogs
-        # else:
-        #     configurational_backlogs.pop(elem)
-            
-        # input(configurational_backlogs)
-
 
     print(configurational_backlogs)
     window = 10
@@ -535,14 +503,11 @@ def battery_sampled_plotter(folder_path, timesteps, agents):
     
     plt.grid()
     plt.legend()
-    # plt.legend(bbox_to_anchor=(0.5, -0.2), loc='upper center', ncol=3)
-    # plt.tight_layout()
     plt.savefig(f"battery_comparison_{agents}agents_sampled.pdf")
     plt.close()
     
 def backlog_sampled_plotter(folder_path, timesteps, agents):
     elements = os.listdir(folder_path)
-    # agents = 1
     samplings = 11
     
     print(elements)
@@ -556,9 +521,7 @@ def backlog_sampled_plotter(folder_path, timesteps, agents):
         elems = os.listdir(inner_path)
         
         if("backlog" in elems):
-            path = inner_path + "/backlog/"
-            
-            # agents = len(os.listdir(path))
+            path = inner_path + "/backlog/"            
             agent_id = 0
             
             backlogs = [0 for j in range(samplings)]
@@ -584,10 +547,6 @@ def backlog_sampled_plotter(folder_path, timesteps, agents):
             
         if(agent_id != 0):
             configurational_backlogs[elem] = backlogs
-        # else:
-        #     configurational_backlogs.pop(elem)
-        
-        # input(configurational_backlogs)
 
     window = 10
     plt.suptitle("Multi-agent : average backlog")
@@ -619,10 +578,6 @@ def file_cutter(folder_path, timesteps, frequency):
         # input(files)
             
         for file in files:
-            # print(f"{folder}_{file.split('_')[3]}_{file.split('_')[4]}_{file.split('_')[5]}.csv")
-            # print(path + file)
-            # input(file.split('_'))
-            # input(f"{file.split('_')[2]}_{file.split('_')[3]}_{file.split('_')[4]}.csv")
             
             with open(path + f"{folder}_{file.split('_')[2]}_{file.split('_')[3]}_{file.split('_')[4]}_2agents.csv", "w+") as fw:
                 csvFileWrite = csv.writer(fw)
@@ -640,18 +595,19 @@ def file_cutter(folder_path, timesteps, frequency):
     
     
 if __name__ == "__main__":
-    # battery_plotter(folder_path, 1440)
-    # battery_sampled_plotter(folder_path, 1440, agents)
     
-    # # # backlogs_plotter(folder_path, 1440, 3)
+    # remove comments for excecuting plottings
+    
+    # battery_sampled_plotter(folder_path, 1440, agents)
     # backlog_sampled_plotter(folder_path, 1440, agents)
     
     # rewards_plotter(folder_path, 4001, agents)
     # framerate_plotter(folder_path, 4001, agents)
 
+    # method used for having same format of dqn tests
     # file_cutter(folder_path + "/Tabular/", timesteps, 400)
     
-    rewards_compare(folder_path, 4001)    
-    battery_compare(folder_path, 4001)
-    backlog_compare(folder_path, 4001)
+    rewards_compare(folder_path, 4001)
     framerate_compare(folder_path, 4001)
+    backlog_compare(folder_path, 1440)
+    battery_compare(folder_path, 1440)

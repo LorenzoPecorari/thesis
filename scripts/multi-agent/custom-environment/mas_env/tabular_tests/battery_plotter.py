@@ -45,7 +45,4 @@ def plot_batteries(timesteps, episodes):
     plt.savefig(f"avg_battery_plot_{episodes-1}_355_60_1_2agents.pdf")
     plt.close()
                 
-        
-        
-                
 plot_batteries(1440, 4001)

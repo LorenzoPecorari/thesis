@@ -32,7 +32,8 @@ class SB3_MAS_Train:
                  train_freq,
                  w,
                  mode,
-                 batch_size
+                 batch_size,
+                 seed
                 ):
         
         self.num_agents = num_agents
@@ -71,7 +72,8 @@ class SB3_MAS_Train:
         panel_surfaces,
         power_idle,
         power_max,
-        w)
+        w,
+        seed)
         
         self.max_steps = self.env.max_steps
         
@@ -662,7 +664,8 @@ class SB3_MAS_Train:
                 fs[agent_id].append(self.env.fs[agent_id] / self.env.max_steps)
 
                 if(self.env.hs_counter[agent_id] > 0):
-                    hs[agent_id].append(self.env.hs[agent_id] / self.env.hs_counter[agent_id])
+                    hs[agent_id].append(self.env.hs[agent_id] / self.env.max_steps)
+                    # hs[agent_id].append(self.env.hs[agent_id] / self.env.hs_counter[agent_id])
                 else:
                     hs[agent_id].append(0.0)
                 framerates[agent_id].append(fs[agent_id][-1] + hs[agent_id][-1])

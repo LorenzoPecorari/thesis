@@ -33,7 +33,8 @@ class SB3_MAS_Train_Parallelized_Processes:
                  train_freq,
                  w,
                  mode,
-                 batch_size
+                 batch_size,
+                 seed
                 ):
         
         self.num_agents = num_agents
@@ -70,7 +71,8 @@ class SB3_MAS_Train_Parallelized_Processes:
         panel_surfaces,
         power_idle,
         power_max,
-        w)
+        w,
+        seed)
         
         self.max_steps = self.env.max_steps
         
@@ -112,69 +114,6 @@ class SB3_MAS_Train_Parallelized_Processes:
         
         for i in range(num_agents):
             self.models[i].set_logger(configure(None, ["stdout"]))
-        
-        def train_with_profiling(self):
-            """Training con profiling dettagliato"""
-            
-            times = {
-                'action_selection': 0,
-                'env_step': 0,
-                'replay_buffer_add': 0,
-                'model_train': 0,
-                'other': 0
-            }
-            
-            for i in range(0, self.num_episodes):
-                obs = self.env.reset()[0]
-                
-                while self.env.agents:
-                    t1 = time.time()
-                    actions_encoded = {}
-                    actions = {}
-                    for agent_id in range(self.num_agents):
-                        if np.random.random() < self.eps:
-                            action = self.models[agent_id].action_space.sample()
-                        else:
-                            action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
-                        actions_encoded[agent_id] = action
-                        actions[agent_id] = self.decode(action)
-                    times['action_selection'] += time.time() - t1
-                    
-                    t2 = time.time()
-                    next_obs, rewards, terminations, truncations, infos = self.env.step(actions)
-                    times['env_step'] += time.time() - t2
-                    
-                    t3 = time.time()
-                    for agent_id in range(self.num_agents):
-                        done = terminations[agent_id] or truncations[agent_id]
-                        self.models[agent_id].replay_buffer.add(
-                            obs=obs[agent_id],
-                            next_obs=next_obs[agent_id],
-                            action=np.array([actions_encoded[agent_id]]),
-                            reward=np.array(rewards[agent_id]),
-                            done=np.array([done]),
-                            infos=[{}]
-                        )
-                        self.models[agent_id].num_timesteps += 1
-                    times['replay_buffer_add'] += time.time() - t3
-                    
-                    t4 = time.time()
-                    for agent_id in range(self.num_agents):
-                        if (self.models[agent_id].num_timesteps > self.models[agent_id].learning_starts and
-                            self.models[agent_id].num_timesteps % self.train_freq == 0):
-                            self.models[agent_id].train(gradient_steps=1, batch_size=64)
-                    times['model_train'] += time.time() - t4
-                    
-                    obs = next_obs
-                    step += 1
-                
-                if (i + 1) % 10 == 0:
-                    total = sum(times.values())
-                    print(f"\n=== Breakdown Episode {i+1} ===")
-                    for key, val in times.items():
-                        pct = (val / total * 100) if total > 0 else 0
-                        print(f"{key:20s}: {val:6.2f}s ({pct:5.1f}%)")
-                    print(f"{'TOTAL':20s}: {total:6.2f}s")
         
     def decode(self, encoded_action):
         fti = int(encoded_action / (3 * self.num_agents * (self.proc_rate + 1)))

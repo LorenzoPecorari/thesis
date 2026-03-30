@@ -16,7 +16,7 @@ class CustomEnvironment(ParallelEnv):
         "name": "custom_environment_v0",
     }
 
-    def __init__(self, num_agents, irradiance_datapaths, delta_time, proc_interval, proc_rate, arr_rate, batteries, panel_surfaces, power_idle, power_max, w):
+    def __init__(self, num_agents, irradiance_datapaths, delta_time, proc_interval, proc_rate, arr_rate, batteries, panel_surfaces, power_idle, power_max, w, seed):
         super().__init__()
         
         self.agents = []
@@ -35,6 +35,7 @@ class CustomEnvironment(ParallelEnv):
         
         self.irradiance_data = []
         self.irradiance_arrays = []
+        self.seed = seed
         
         for filepath in irradiance_datapaths:
             # print(filepath, delta_time, proc_interval)
@@ -43,9 +44,6 @@ class CustomEnvironment(ParallelEnv):
             self.irradiance_data.append(df)
             
             self.irradiance_arrays.append(df['ghi'].values)
-        
-        # for elem in self.irradiance_data:
-        #     print(len(elem))
         
         self.irradiance_level = [0.0 for i in range(0, self._num_agents)]
         
@@ -75,20 +73,10 @@ class CustomEnvironment(ParallelEnv):
         except:
             self.max_steps = 1
 
-        # observation_space: [b_1, s_i, t_1, b_2, s_2, t_2, ..., b_n, s_n, t_n]
-        # for each agent there are three variables in the range [0.0, 1.0] where
-            # b_i -> "battery level"
-            # s_i -> "storage level"
-            # t_i -> "episode completion"
         self._action_spaces = {
             agent: spaces.MultiDiscrete([self._processing_rate + 1, 3, self._num_agents, self._processing_rate + 1]) for agent in self.possible_agents
         }
         
-        # action_space: [f_i, x_i, g_i, h_i] where
-            # f_i -> "local framerate"
-            # x_i -> "offloading mode"
-            # g_i -> "target node"
-            # h_i -> "offloading framerate"
         self._observation_spaces = {
             agent: spaces.Box(
                 low=np.array([0.0, 0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0], dtype=np.float32),
@@ -103,24 +91,10 @@ class CustomEnvironment(ParallelEnv):
         self.hs = [0 for i in range(0, self._num_agents)]
         self.hs_counter = [0 for i in range(0, self.num_agents)]
         
-        # self.r_battery = [0 for i in range(0, self._num_agents)]
-        # self.r_frames = [0 for i in range(0, self._num_agents)]
-        # self.r_cooperation = [0 for i in range(0, self._num_agents)]
-        # self.r_backlog = [0 for i in range(0, self._num_agents)]
-    
     # function for retrieving level of backlog
     def calculate_backlog_level(self, agent_id):
         qty = self.backlogs[agent_id]
-        # max_storage = self._processing_rate * self._proc_interval
-        
-        # DA TESTARE VERSIONE CON CAPACITÀ PARI A 10 INTERVALLI
         max_storage = self._processing_rate * self._proc_interval * 10
-        # max_storage = self._processing_rate * self._proc_interval * (3600 / self._proc_interval)
-        
-        # return 1 - qty/max_storage
-        
-        # return (1 - qty / (self._processing_rate * 3600))
-        
         
         if(qty == 0):
             return 0
@@ -136,9 +110,7 @@ class CustomEnvironment(ParallelEnv):
         xti = self.actions[agent_id][1]
         gti = self.actions[agent_id][2]
         hti = self.actions[agent_id][3]
-        
-        # print(f"agent_id: {agent_id} - fti: {fti} - xti: {xti} - gti: {gti} - hti: {hti}")
-        
+                
         ft_gti = self.actions[gti][0]
         xt_gti = self.actions[gti][1]
         gt_gti = self.actions[gti][2]
@@ -160,12 +132,6 @@ class CustomEnvironment(ParallelEnv):
         
         processable = max(min(backlog, int((actual_battery - self.e_idle) / self.e_frame), self._processing_rate * self._proc_interval), 0)
         needed_energy = (fti * self._proc_interval * self.e_frame) + self.e_idle
-        
-        # print(f"[LOCAL] agent={agent_id} fti={fti} backlog={backlog} "
-        #     f"actual_bat={actual_battery:.2f} needed={needed_energy:.2f} "
-        #     f"processable={processable} e_idle={self.e_idle:.4f} e_frame={self.e_frame:.6f}")
-        
-        # input()
         
         return jrf.jit_calculate_reward_local(fti,
                                    xti,
@@ -195,9 +161,7 @@ class CustomEnvironment(ParallelEnv):
         xti = self.actions[agent_id][1]
         gti = self.actions[agent_id][2]
         hti = self.actions[agent_id][3]
-        
-        # print(f"agent_id: {agent_id} - fti: {fti} - xti: {xti} - gti: {gti} - hti: {hti}")
-        
+                
         ft_gti = self.actions[gti][0]
         xt_gti = self.actions[gti][1]
         gt_gti = self.actions[gti][2]
@@ -319,8 +283,13 @@ class CustomEnvironment(ParallelEnv):
 
         infos = {a: {} for a in self.agents}
         
-        self.episode = 355
-
+        if(self.seed == "fixed_winter"):
+            self.episode = 355
+        elif(self.seed == "fixed_summer"):
+            self.episode = 172
+        elif(self.seed == "linear"):
+            self.episode = (self.episode + 1) % 365
+            
         return observations, infos
         
     def update_states_locally(self):
@@ -328,9 +297,6 @@ class CustomEnvironment(ParallelEnv):
         
         for agent_id in range(0, self._num_agents):
             fti = self.actions[agent_id][0]
-            # xti = self.actions[agent_id][1]
-            # gti = self.actions[agent_id][2]
-            # hti = self.actions[agent_id][3]
             
             idx = (self.episode * self.max_steps) + self.timestep
             self.irradiance_level[agent_id] = self.irradiance_arrays[agent_id][idx] / self.max_irrad
@@ -467,7 +433,6 @@ class CustomEnvironment(ParallelEnv):
             obs = self.states[agent]
             
             # aggregated batteries
-            # print(self.states)
             min_battery = min(self.states[key][0] for key in range(0, self._num_agents))
             max_battery = max(self.states[key][0] for key in range(0, self._num_agents))
             
@@ -503,15 +468,8 @@ class CustomEnvironment(ParallelEnv):
             obs[8] = max_backlog        
             
             observations[agent] = np.array(obs, dtype=np.float32)
-            self.states[agent] = obs
+            self.states[agent] = np.array(obs, dtype=np.float32)
 
-        # observations = {
-        #     a: (
-        #         np.array([val for sublist in self.states for val in sublist], dtype=np.float32)
-        #     )
-        #     for a in self.agents
-        # }
-        
         infos = {a: {} for a in self.agents}
         
         if any(terminations.values()) or all(truncations.values()):

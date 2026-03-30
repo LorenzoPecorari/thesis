@@ -32,7 +32,8 @@ class SB3_MAS_Train:
                  train_freq,
                  w,
                  mode,
-                 batch_size
+                 batch_size,
+                 seed
                 ):
         
         self.num_agents = num_agents
@@ -48,6 +49,7 @@ class SB3_MAS_Train:
         self.power_idle = power_idle
         self.power_max = power_max
         
+        self.seed = seed
         self.w = w
         self.mode = mode
         
@@ -71,7 +73,8 @@ class SB3_MAS_Train:
         panel_surfaces,
         power_idle,
         power_max,
-        w)
+        w,
+        seed)
         
         self.max_steps = self.env.max_steps
         
@@ -453,108 +456,6 @@ class SB3_MAS_Train:
         if(self.eps > self.eps_fin):
             self.eps = max(self.eps * self.eps_dec, self.eps_fin)
     
-    def train_with_profiling(self):
-        
-        times = {
-            'action_selection': 0,
-            'env_step': 0,
-            'replay_buffer_add': 0,
-            'model_train': 0,
-            'other': 0
-        }
-        
-        step = 0
-        
-        for i in range(0, self.num_episodes):
-            obs = self.env.reset()[0]
-            
-            while self.env.agents:
-                t1 = time.time()
-                '''
-                actions_encoded = {}
-                actions = {}
-                for agent_id in range(self.num_agents):
-                    if np.random.random() < self.eps:
-                        action = self.models[agent_id].action_space.sample()
-                    else:
-                        action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
-                    actions_encoded[agent_id] = action
-                    actions[agent_id] = self.decode(action)
-                times['action_selection'] += time.time() - t1
-                '''
-                
-                actions_encoded = {}
-                actions = {}
-                
-                # Stack observations per tutti gli agenti
-                obs_batch = np.array([obs[agent_id] for agent_id in range(self.num_agents)])
-                
-                # Genera maschera random per epsilon-greedy (una per agente)
-                explore_mask = np.random.random(self.num_agents) < self.eps
-                
-                # === EXPLOITATION: Batched forward pass ===
-                with torch.no_grad():
-                    obs_tensor = torch.FloatTensor(obs_batch).to(self.device)
-                    q_values_batch = self.models[0].policy.q_net(obs_tensor)  # Usa modello [0] come riferimento
-                    # Se hai modelli diversi per agente, devi fare un loop (vedi variante sotto)
-                    
-                    greedy_actions = q_values_batch.argmax(dim=1).cpu().numpy()
-                
-                # === EXPLORATION: Sample random actions ===
-                random_actions = np.array([
-                    self.models[agent_id].action_space.sample() 
-                    for agent_id in range(self.num_agents)
-                ])
-                
-                # === COMBINE: Epsilon-greedy selection ===
-                for agent_id in range(self.num_agents):
-                    if explore_mask[agent_id]:
-                        # Explore: usa azione random
-                        action_encoded = random_actions[agent_id]
-                    else:
-                        # Exploit: usa azione greedy dal batch
-                        action_encoded = greedy_actions[agent_id]
-                    
-                    actions_encoded[agent_id] = action_encoded
-                    actions[agent_id] = self.decode(action_encoded)
-                
-                
-                t2 = time.time()
-                next_obs, rewards, terminations, truncations, infos = self.env.step(actions)
-                times['env_step'] += time.time() - t2
-                
-                t3 = time.time()
-                for agent_id in range(self.num_agents):
-                    done = terminations[agent_id] or truncations[agent_id]
-                    self.models[agent_id].replay_buffer.add(
-                        obs=obs[agent_id],
-                        next_obs=next_obs[agent_id],
-                        action=np.array([actions_encoded[agent_id]]),
-                        reward=np.array(rewards[agent_id]),
-                        done=np.array([done]),
-                        infos=[{}]
-                    )
-                    self.models[agent_id].num_timesteps += 1
-                times['replay_buffer_add'] += time.time() - t3
-                
-                t4 = time.time()
-                for agent_id in range(self.num_agents):
-                    if (self.models[agent_id].num_timesteps > self.models[agent_id].learning_starts and
-                        self.models[agent_id].num_timesteps % self.train_freq == 0):
-                        self.models[agent_id].train(gradient_steps=self.grad_steps, batch_size=self.batch_size)
-                times['model_train'] += time.time() - t4
-                
-                obs = next_obs
-                step += 1
-            
-            if (i + 1) % 10 == 0:
-                total = sum(times.values())
-                print(f"\n=== Breakdown Episode {i+1} ===")
-                for key, val in times.items():
-                    pct = (val / total * 100) if total > 0 else 0
-                    print(f"{key:20s}: {val:6.2f}s ({pct:5.1f}%)")
-                print(f"{'TOTAL':20s}: {total:6.2f}s")
-    
     def train(self):
         self.eps = self.eps_init
         
@@ -660,7 +561,8 @@ class SB3_MAS_Train:
                 fs[agent_id].append(self.env.fs[agent_id] / self.env.max_steps)
 
                 if(self.env.hs_counter[agent_id] > 0):
-                    hs[agent_id].append(self.env.hs[agent_id] / self.env.hs_counter[agent_id])
+                    hs[agent_id].append(self.env.hs[agent_id] / self.env.max_steps)
+                    # hs[agent_id].append(self.env.hs[agent_id] / self.env.hs_counter[agent_id])
                 else:
                     hs[agent_id].append(0.0)
                 framerates[agent_id].append(fs[agent_id][-1] + hs[agent_id][-1])

@@ -1,7 +1,4 @@
 from sb3_mas_train import SB3_MAS_Train
-# from sb3_mas_train_threads import SB3_MAS_Train_Parallelized_Threads
-# from sb3_mas_train_processes import SB3_MAS_Train_Parallelized_Processes
-
 
 irradiance_datapaths = [
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
@@ -15,6 +12,7 @@ irradiance_datapaths = [
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv',
     '../../../../../../dataset/csv_41.89109712745386_12.503566993103867_fixed_23_180_PT15M_2024.csv'
     ]
+
 delta_time = 15 * 60
 proc_interval = 1 * 60
 proc_rate = 20
@@ -24,13 +22,11 @@ num_episodes = 4001
 
 eps_init = 1.0
 eps_fin = 0.05
-# eps_dec = 0.999
 eps_dec = 0.9985
 
 # num_agents = 2
 # battery_capacities = [25, 100]
 # panel_surfaces = [1.0, 0.5]
-
 
 # num_agents = 3
 # battery_capacities = [25, 100, 50]

@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import os
+import pickle
 
 class TabularAgent:
     def __init__(self,
@@ -22,7 +24,8 @@ class TabularAgent:
                  eps_min,
                  eps_dec,
                  eps_init,
-                 episodes
+                 episodes,
+                 day
                  ):
         
         self.agent_id = agent_id
@@ -46,6 +49,8 @@ class TabularAgent:
         self.eps_min = eps_min
         self.eps = eps_init
         self.eps_dec = eps_dec
+        
+        self.day = day
 
         action_dims = [self.max_fps + 1, 3, self.num_agents, self.max_fps + 1]
         state_dims = []
@@ -63,11 +68,7 @@ class TabularAgent:
     def state_discretization(self, state):
         indeces = []
         
-        # print(f"state: {state}")
-        # print("state [discretization]:", state)
-        
         for agent in range(0, self.num_agents):
-            # print(state[2*agent], state[3*agent+1], state[2*agent+2])
             battery_idx = int(min(state[3*agent] * self.battery_bins, self.battery_bins - 1))
             backlog_idx = min(int(state[3*agent + 1]), 3)
             time_idx = int(min(state[3*agent + 2] * self.time_bins, self.time_bins - 1))            
@@ -75,11 +76,6 @@ class TabularAgent:
             indeces.append(battery_idx)
             indeces.append(backlog_idx)
             indeces.append(time_idx)
-            # print(f"agent {agent} -> battery: {battery_idx}, backlog: {backlog_idx}, time_idx: {time_idx}")
-
-            # input()
-
-        # print(indeces)
 
         return tuple(indeces)
 
@@ -94,11 +90,8 @@ class TabularAgent:
                     ]
         else:
             state_idx = self.state_discretization(state)
-            # q_values = self.table
-            # for elem in state_idx:
-            #     q_values = q_values[elem]
-
-            q_values = self.table[*state_idx]
+            indices = (*state_idx,)
+            q_values = self.table[indices]
 
             best_value = -1
             best_action = [0, 0, 0, 0]
@@ -114,13 +107,6 @@ class TabularAgent:
         fti = best_action[0]
         hti = best_action[3]
         
-        if((fti + hti) > self.max_fps):
-            k = self.max_fps / (fti + hti)
-            best_action[0] = int(best_action[0] * k)
-            best_action[3] = int(best_action[3] * k)
-        
-        # input(f"fti: {fti} - hti: {hti} - action_local: {best_action[0]} - action_off: {best_action[3]}")
-        
         return np.array(best_action)
         
     def update_table(self, state, next_state, action, reward):
@@ -128,28 +114,21 @@ class TabularAgent:
         next_state_idx = self.state_discretization(next_state)
         
         f, x, g, h = action
+        indices = (*state_idx, f, x, g, h)
+        q_value = self.table[indices]
         
-        q_value = self.table[*state_idx, f, x, g, h]
-        # for elem in state_idx:
-        #     q_values = q_values[elem]
-            
-        # for a in action:
-        #     q_values = q_values[a]
-    
-        next_q_value = self.table[*next_state_idx]
-        # for elem in next_state_idx:
-        #     next_q_values = next_q_values[elem]
+        q_value = self.table[indices]
+        next_q_value = self.table[(*next_state_idx,)]
         
         best_next_value = np.max(next_q_value)
-        # for f in range(0, self.max_fps+1):
-        #         for x in range(0, 3):
-        #             for g in range(0, self.num_agents):
-        #                 for h in range(0, self.max_fps + 1):
-        #                     if(next_q_value[f][x][g][h] > best_next_value):
-        #                         best_next_value = next_q_value[f][x][g][h]
                                 
-        self.table[*state_idx, f, x, g, h] = ((1 - self.alpha) * q_value) + (self.alpha * (reward + (self.gamma * best_next_value)))
+        self.table[indices] = ((1 - self.alpha) * q_value) + (self.alpha * (reward + (self.gamma * best_next_value)))
 
     def update_epsilon(self):
         if(self.eps > self.eps_min):
             self.eps *= self.eps_dec
+            
+    def save_table(self):
+        filepath = f"./saved_tables/single-agent_{int(self.battery_capacity/3600)}Wh_{self.day}_{self.episodes-1}.npy"
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        np.save(filepath, self.table)

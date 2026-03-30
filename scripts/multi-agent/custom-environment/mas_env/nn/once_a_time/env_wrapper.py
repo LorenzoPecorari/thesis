@@ -7,21 +7,10 @@ class EnvWrapper(gymnasium.Env):
         self.env = env
         self.agent_id = agent_id
         
-        # print(env._observation_spaces)
-        
-        # for elem in env._observation_spaces:
-        #     print(env._observation_spaces[elem], type(env._observation_spaces[elem]))
-        
         self.observation_space = env._observation_spaces[agent_id]
         
         # mixed radix representation !!!
         self.action_space = Discrete((env._processing_rate + 1) * 3 * env._num_agents * (env._processing_rate + 1))
-        
-        # self.state_shape = (env._num_agents * 3)
-        # self.action_shape = (env._processing_rate + 1) * 3 * env._num_agents * (env._processing_rate + 1)
-
-        # self.action_shape = (env._processing_rate + 1, 3, env._num_agents, env._processing_rate + 1)
-        
         
     def reset(self, seed=None, options=None):
         obs, infos = self.env.reset(seed=None, options=None)

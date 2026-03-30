@@ -82,6 +82,8 @@ batch_size = 256
 
 mode = 'cuda'
 
+seed = "fixed_winter"
+
 if __name__ == "__main__":
     trainer1 = SB3_MAS_Train(
         num_agents,
@@ -101,11 +103,10 @@ if __name__ == "__main__":
         train_freq,
         w,
         mode,
-        batch_size
+        batch_size,
+        seed
         )
     
-    # trainer.train_with_profiling()
-
     trainer2 = SB3_MAS_Train_Parallelized_Threads(
         num_agents,
         num_episodes,
@@ -124,11 +125,10 @@ if __name__ == "__main__":
         train_freq,
         w,
         mode,
-        batch_size
+        batch_size,
+        seed
         )
     
-    # trainer.train_with_profiling()
-
     trainer3 = SB3_MAS_Train_Parallelized_Processes(
         num_agents,
         num_episodes,
@@ -147,10 +147,10 @@ if __name__ == "__main__":
         train_freq,
         w,
         mode,
-        batch_size
+        batch_size,
+        seed
         )
     
-    # # trainer.train_with_profiling()
     # trainer3.train()
     # trainer2.train()
     trainer1.train()

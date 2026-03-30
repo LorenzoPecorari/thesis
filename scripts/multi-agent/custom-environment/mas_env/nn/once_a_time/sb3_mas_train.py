@@ -40,7 +40,8 @@ class SB3_MAS_Train:
                  w,
                  mode,
                  batch_size,
-                 smart_node
+                 smart_node,
+                 seed
                 ):
         
         self.num_agents = num_agents
@@ -56,6 +57,7 @@ class SB3_MAS_Train:
         self.power_idle = power_idle
         self.power_max = power_max
         
+        self.seed = seed
         self.w = w
         self.mode = mode
         
@@ -82,7 +84,8 @@ class SB3_MAS_Train:
         panel_surfaces,
         power_idle,
         power_max,
-        w)
+        w,
+        seed)
         
         self.max_steps = self.env.max_steps
         
@@ -472,100 +475,6 @@ class SB3_MAS_Train:
         if(self.eps > self.eps_fin):
             self.eps = max(self.eps * self.eps_dec, self.eps_fin)
     
-    def train_with_profiling(self):
-        
-        times = {
-            'action_selection': 0,
-            'env_step': 0,
-            'replay_buffer_add': 0,
-            'model_train': 0,
-            'other': 0
-        }
-        
-        step = 0
-        
-        for i in range(0, self.num_episodes):
-            obs = self.env.reset()[0]
-            
-            while self.env.agents:
-                t1 = time.time()
-                '''
-                actions_encoded = {}
-                actions = {}
-                for agent_id in range(self.num_agents):
-                    if np.random.random() < self.eps:
-                        action = self.models[agent_id].action_space.sample()
-                    else:
-                        action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
-                    actions_encoded[agent_id] = action
-                    actions[agent_id] = self.decode(action)
-                times['action_selection'] += time.time() - t1
-                '''
-                
-                actions_encoded = {}
-                actions = {}
-                
-                obs_batch = np.array([obs[agent_id] for agent_id in range(self.num_agents)])
-                
-                explore_mask = np.random.random(self.num_agents) < self.eps
-                
-                with torch.no_grad():
-                    obs_tensor = torch.FloatTensor(obs_batch).to(self.device)
-                    q_values_batch = self.models[0].policy.q_net(obs_tensor)
-                    
-                    greedy_actions = q_values_batch.argmax(dim=1).cpu().numpy()
-                
-                random_actions = np.array([
-                    self.models[agent_id].action_space.sample() 
-                    for agent_id in range(self.num_agents)
-                ])
-                
-                for agent_id in range(self.num_agents):
-                    if explore_mask[agent_id]:
-                        action_encoded = random_actions[agent_id]
-                    else:
-                        action_encoded = greedy_actions[agent_id]
-                    
-                    actions_encoded[agent_id] = action_encoded
-                    actions[agent_id] = self.decode(action_encoded)
-                
-                
-                t2 = time.time()
-                next_obs, rewards, terminations, truncations, infos = self.env.step(actions)
-                times['env_step'] += time.time() - t2
-                
-                t3 = time.time()
-                for agent_id in range(self.num_agents):
-                    done = terminations[agent_id] or truncations[agent_id]
-                    self.models[agent_id].replay_buffer.add(
-                        obs=obs[agent_id],
-                        next_obs=next_obs[agent_id],
-                        action=np.array([actions_encoded[agent_id]]),
-                        reward=np.array(rewards[agent_id]),
-                        done=np.array([done]),
-                        infos=[{}]
-                    )
-                    self.models[agent_id].num_timesteps += 1
-                times['replay_buffer_add'] += time.time() - t3
-                
-                t4 = time.time()
-                for agent_id in range(self.num_agents):
-                    if (self.models[agent_id].num_timesteps > self.models[agent_id].learning_starts and
-                        self.models[agent_id].num_timesteps % self.train_freq == 0):
-                        self.models[agent_id].train(gradient_steps=self.grad_steps, batch_size=self.batch_size)
-                times['model_train'] += time.time() - t4
-                
-                obs = next_obs
-                step += 1
-            
-            if (i + 1) % 10 == 0:
-                total = sum(times.values())
-                print(f"\n=== Breakdown Episode {i+1} ===")
-                for key, val in times.items():
-                    pct = (val / total * 100) if total > 0 else 0
-                    print(f"{key:20s}: {val:6.2f}s ({pct:5.1f}%)")
-                print(f"{'TOTAL':20s}: {total:6.2f}s")
-    
     def train(self):
         self.eps = self.eps_init
         
@@ -595,7 +504,7 @@ class SB3_MAS_Train:
         if file_py:
             most_recent = max(file_py, key=lambda f: f.stat().st_mtime)  # Usa filesystem timestamp
             
-            print(f"Caricamento: {most_recent}")
+            print(f"Loading: {most_recent}")
             
             model = DQN.load(str(most_recent))
             
@@ -604,8 +513,6 @@ class SB3_MAS_Train:
             model.set_env(venv)
             
             model.learn(total_timesteps=0)
-            
-            # self.models[self.smart_node] = model
             
             for agent in range(self.num_agents):
                 self.models[agent] = model
@@ -617,7 +524,7 @@ class SB3_MAS_Train:
         for i in range(0, self.num_episodes):
             temp = time.time()
             
-            obs = self.env.reset()
+            obs = self.env.reset(self.seed)
             
             rewards_episode = {agent: 0.0 for agent in range(self.num_agents)}
             obs = obs[0]
@@ -643,28 +550,16 @@ class SB3_MAS_Train:
                 
                 for agent_id in range(0, self.num_agents):
                     
-                    # if(agent_id == self.smart_node):
-                    #     # input(f"agent_id: {agent_id} - smart_node: {self.smart_node}")
-            
                     if(np.random.random() < self.eps):
                         action = self.models[agent_id].action_space.sample()
                     else:
                         action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
-                    # else:
-                    #     action = self.models[agent_id].action_space.sample()
                     
                     self.models[agent_id]._current_progress_remaining = progress_remaining     
-                    # if(np.random.random() < self.eps):
-                    #     action = self.models[agent_id].action_space.sample()
-                    # else:
-                    #     action, _ = self.models[agent_id].predict(obs[agent_id], deterministic=False)
                     
                     actions_encoded[agent_id] = action
                     actions[agent_id] = self.decode(action)               
-                    # self.get_action(agent_id, obs[agent_id], actions_encoded, actions)
-                
-                # print(actions)
-                
+                    
                 next_obs, rewards, terminations, truncations, infos = self.env.step(actions)
                                     
                 for agent_id in range(0, self.num_agents):
@@ -702,14 +597,15 @@ class SB3_MAS_Train:
             temp = time.time() - temp
             times.append(temp)
 
-            # if(i % int(100) == 0):
-            print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - eps: {round(self.eps, 2)} - time: {temp}")
+            print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - eps: {round(self.eps, 2)} - time: {round(temp, 5)}")
             
             for agent_id in range(0, self.num_agents):            
                 fs[agent_id].append(self.env.fs[agent_id] / self.env.max_steps)
 
                 if(self.env.hs_counter[agent_id] > 0):
-                    hs[agent_id].append(self.env.hs[agent_id] / self.env.hs_counter[agent_id])
+                    hs[agent_id].append(self.env.hs[agent_id] / self.env.max_steps)
+                    # hs[agent_id].append(self.env.hs[agent_id] / self.env.hs_counter[agent_id])
+
                 else:
                     hs[agent_id].append(0.0)
                 framerates[agent_id].append(fs[agent_id][-1] + hs[agent_id][-1])
@@ -727,7 +623,6 @@ class SB3_MAS_Train:
                 self.env.hs[agent_id] = 0
                 self.env.hs_counter[agent_id] = 0
         
-        # self.models[self.smart_node].save(f'./saved_models/DQN_{self.battery_capacities[self.smart_node]}Wh_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip')
 
         folder_path = datetime.now().strftime("%Y%m%d_%H%M%S")
         if not os.path.exists(folder_path):

@@ -82,6 +82,7 @@ train_freq = 16
 batch_size = 256
 
 mode = 'cuda'
+seed = "fixed_winter"
 
 if __name__ == "__main__":
     trainer1 = SB3_MAS_Train(
@@ -103,10 +104,10 @@ if __name__ == "__main__":
         w,
         mode,
         batch_size,
-        smart_node
+        smart_node,
+        seed
         )
     
-    # trainer.train_with_profiling()
     trainer1.train()
 
     smart_node = 7
@@ -130,8 +131,8 @@ if __name__ == "__main__":
         w,
         mode,
         batch_size,
-        smart_node
+        smart_node,
+        seed
         )
     
-    # trainer.train_with_profiling()
     trainer1.train()

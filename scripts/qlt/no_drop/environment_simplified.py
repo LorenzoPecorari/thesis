@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
-# numpy numbers management
 import numpy as np
 
 # others
@@ -19,14 +18,14 @@ import random
 import interpol as ip
 
 '''
- === Customized environment for energy-aware system with PV ===
+ === Customized environment for energy-aware edge nodes with PV panel ===
 
 Each status is represented as:
     S = {s_1, ..., s_n}
     if s_t belongs to S, so
-        s_t = {battery_level(t-1), time(t)}
+        s_t = {battery_level(t-1), backlog_status(t), time(t)}
 
-where each variable is normalized over the range [0, 1].
+where each variable is normalized over the range [0, 1] except backlog_status that is defined over a scale of 4.
 
 It is needed to provide to the environment :
  - the path of a dataset of data related to irradiance measurements (coming from Solcast),
@@ -34,17 +33,15 @@ It is needed to provide to the environment :
  - the power at idle and the peak power required by the hardware,
  - the frequency of measurements and the desired computational frequency in seconds,
  - an estimation of the maximum irradiance reachable,
- - the efficiency and the area of the photovoltaic panel.
+ - the efficiency and the area of the photovoltaic panel,
+ - the arrival rate of the system.
  
 There are (fps + 1) action that can be chosen and each of them tell which is the framerate
 to adopt in such step on the environment in order to compute the frames that arrives in the backlog at each time.
 
-If the action chosen allow to not drain all the energy stored in the battery until that moment,
-the reward will be the number of frames taken from the backlog and computed, so (fps * interval between each step).
-Otherwise, the reawrd will be 0 and the number of frames extracted from the backlog and computed will be based on 
-the energy of the battery.   
- 
-    
+If the action chosen allows to not drain all the energy stored in the battery until that moment,
+the reward will be the sum of three components representing quality of processing, battery management and
+backlog reduction for the agent. Otherwise, the reawrd will be 0.
 '''
 
 
@@ -84,8 +81,7 @@ class EnergyPVEnv(gymnasium.Env):
         # energy params
         self.p_idle = power_idle
         self.e_idle = power_idle * proc_interval                    # [Ws = J over defined interval]
-        self.e_frame = (((power_max - power_idle)) / fps)                           # [Ws = J] per singolo frame in un secondo, da rivedere
-        # self.e_frame = ((power_max - power_idle) / 30)
+        self.e_frame = (((power_max - power_idle)) / fps)           # [Ws = J] for single frame
         
         self.energy_consumption = 0.0
         
@@ -116,9 +112,8 @@ class EnergyPVEnv(gymnasium.Env):
         self.equinox = datetime.datetime(self.year, 3, 20)
         self.day = 0
 
-        # ACTIONS :
+        # actions :
         # 0, 1, ..., fps -> tells fps to process
-
         self.action_space = spaces.Discrete(self.fps+1)
         
         self.observation_space = spaces.Box(
@@ -222,15 +217,9 @@ class EnergyPVEnv(gymnasium.Env):
     def get_pv_energy(self, irradiance):
         if(irradiance <= 0.0):
             return 0.0
-        
-        
+                
         power_pv = irradiance * self.pv_area * self.pv_efficiency
-        # power_pv = min(irradiance * self.pv_area * self.pv_efficiency, 10)
-        # print(f"pv power: {irradiance * self.pv_area * self.pv_efficiency} VS {power_pv} => energy: {power_pv * self.interval}")
         energy_pv = power_pv * self.interval
-
-        # print(self.battery_level, energy_pv, power_pv, irradiance)
-        # input()
 
         return energy_pv
     
@@ -238,12 +227,13 @@ class EnergyPVEnv(gymnasium.Env):
         normalized_value = value / self.battery_capacity
         
         if((normalized_value) > 1.0):
-            # print(f"battery: {self.battery} - battery_level: {self.battery_level} - normalized_value: {normalized_value}")
             self.battery = self.battery_capacity
             self.battery_level = 1.0
+
         elif((normalized_value) < 0.0):
             self.battery_level = 0.0
             self.battery = 0.0
+
         else:
             self.battery = value
             self.battery_level = normalized_value
@@ -261,30 +251,18 @@ class EnergyPVEnv(gymnasium.Env):
         reward = 0
         
         if(actual > needed and processable > 0):
-            # print(actual, needed, panel_energy)
-            # input()
-            # input(f"{backlog} - old")
             actual = max(actual - needed, 0)
-            # print(battery)
-            
             processed = min(processable, action * self.interval)
             new_backlog = self.backlog - processed
-            # input(f"{backlog} - new")
-            
-            # self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
-            # self.backlog = max(self.backlog - processed, 0)
-            # self.total_frames_processed += processed
 
             try:
                 reward = (processed / processable) + (actual / self.battery_capacity) + (processed / backlog)
-                # return processed / processable
             except:
                 reward = (processed / processable) + (actual / self.battery_capacity)
             finally:
                 backlog = new_backlog
         else:
             actual = panel_energy - self.e_idle
-            # self.update_battery_level(panel_energy - self.e_idle)
             
             if(processable == 0 and action == 0):
                 reward = (actual / self.battery_capacity)
@@ -298,212 +276,8 @@ class EnergyPVEnv(gymnasium.Env):
         self.update_battery_level(battery)
         self.backlog = max(backlog, 0)
         self.total_frames_processed += processed
-        
-        # input()
 
         return
-        
-        # processed = min(processable, action * self.interval)
-        
-        # needed = processed * self.e_frame
-        
-        # self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
-        
-        # if(actual > needed):
-        #     if(processable > 0):
-        #         reward = (processed / processable) * self.battery_level * 100
-        #         self.backlog -= processed
-        #         self.total_frames_processed += processed
-        #         return reward
-        #     else:
-        #         return -100
-        # else:
-        #     self.backlog -= processed
-        #     self.total_frames_processed += processed
-        #     return -100
-            
-            
-        if(actual > needed and self.battery_level > 0.0):
-            try:
-                reward = (processed / processable) * self.battery_level * 100
-                self.backlog -= processed
-                self.total_frames_processed += processed
-                return reward
-                # return processed / processable
-            except:
-                return 0
-        else:
-            return -100
-            # return -100
-
-        # if(processable > 0):
-        #     try:
-        #         return processed
-        #     except:
-        #         return 0
-        
-        return 0    
-    
-    # (G)old 
-    def calculate_reward_old(self, action, panel_energy):
-                
-        battery = self.battery_level * self.battery_capacity
-        actual = battery + panel_energy
-        
-        # if self.irrad < 0.1 and self.battery_level < 0.35:
-        # # Override dell'azione
-        #     processed = 0
-            
-        #     # Consuma solo idle
-        #     self.update_battery_level(panel_energy - self.e_idle)
-        #     self.energy_consumption = self.e_idle
-        #     self.backlog += (self.fps * self.interval)
-        #     self.total_frames_processed += 0
-            
-        #     # Reward minimo (non zero per non confondere)
-        #     return 0.1
-        
-        needed = action * self.interval * self.e_frame + self.e_idle
-        
-        processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
-        processed = min(processable, action * self.interval)
-        
-        self.update_battery_level(panel_energy - ((processed * self.e_frame) + self.e_idle))
-        
-        self.energy_consumption = (processed * self.e_frame) + self.e_idle
-        
-        self.backlog -= processed
-        self.total_frames_processed += processed
-        
-        reward = 0
-
-        # if(processable == 0 or self.battery_level <= 0.2):
-        #     reward = 0
-        # elif(processable > 0):
-        #     reward = round((self.battery_level ** 2) * (processed/processable) * processed, 2)
-        
-        if(processable == 0):
-          return 0  
-        
-        if(self.battery_level <= 0.2):
-            try:
-                return round((self.battery_level ** 2) * (processed/processable), 2)
-            except:
-                return 0
-        
-        try:
-            return round((self.battery_level ** 1) * (processed/processable), 2)
-        except:
-            return 0
-            
-        # return reward
-
-        # if(processable > 0):
-        #     efficiency = processed / processable
-        #     # reward = processed * efficiency * self.battery_level
-        #     reward = (processed / processable) * processed * (self.battery_level ** 2)
-
-        # return reward
-        
-        # if(actual > needed):
-        #     try:
-        #         return (processed / processable) * 100
-        #     except:
-        #         return 0
-        # else:
-        #     return 0
-            
-        
-        # if(actual > needed):
-        #     processable = min(int((actual - self.e_idle) / self.e_frame), self.fps * self.interval)
-        #     processed = min(processable, action * self.interval)
-            
-        #     # return int((processed)/ processable)
-        #     try:
-        #         return processed / processable
-        #     except:
-        #         return -1
-        #     # return int(processed / self.interval)
-        # else:
-        #     return 0
-        
-        # battery = self.battery_level * self.battery_capacity
-        # requested = action * self.interval
-        # processable = min(self.fps * self.interval, int((battery - self.e_idle + panel_energy) / self.e_frame))
-        
-        # if(requested >= processable):
-        #     self.update_battery_level((battery - self.e_idle + panel_energy - (processable * self.e_frame)))
-        #     self.backlog -= processable
-        #     self.total_frames_processed += processable
-        #     return 0
-        # else:
-        #     self.update_battery_level((battery - self.e_idle + panel_energy - (requested * self.e_frame)))
-        #     self.backlog -= requested
-        #     self.total_frames_processed += requested
-        #     return (requested / processable) * 100
-        
-        '''
-        actual_battery_energy = self.battery_level * self.battery_capacity
-
-        frames_per_interval = action * self.interval
-        # print(f"fps: {self.fps} - action: {action} - fpi: {frames_per_interval}")
-        energy_needed = (frames_per_interval * self.e_frame) + self.e_idle
-        
-        # print(f"actual_battery_energy: {actual_battery_energy} - E_pv: {panel_energy} - needed: {energy_needed}")
-        # input(f"Presse enter...")
-        
-        # VERSIONE 2
-        max_processable = max(0, int(((actual_battery_energy + panel_energy) - self.e_idle) / self.e_frame))
-        frames_processed = min(frames_per_interval, max_processable)
-        energy_used = (frames_processed * self.e_frame) + self.e_idle
-        
-        
-        input(f"HALT! requested: {frames_per_interval} - processed: {max_processable}")
-        
-        self.update_battery_level(panel_energy - energy_used)
-        self.backlog -= frames_processed
-        self.total_frames_processed += frames_processed
-        
-        # print(f"requested: {frames_per_interval} - processed: {frames_processed}")
-        # input("...")
-        
-        if(frames_per_interval > max_processable):
-            input(f"HALT! requested: {frames_per_interval} - processed: {max_processable}")
-            return 0
-        else:
-            return 1
-        
-        # # REWARD: semplicemente i frame processati
-        # return frames_processed
-        
-        # VERSIONE 1     
-        if((actual_battery_energy + panel_energy) >= energy_needed):
-            self.update_battery_level(panel_energy - energy_needed)
-            self.backlog -= frames_per_interval
-            self.total_frames_processed += frames_per_interval
-            return frames_per_interval
-            
-            # # compute if other frames might be processed
-            # computable = min(int((actual_battery_energy + panel_energy) / self.e_frame), self.fps * self.interval)
-            # if(computable > frames_per_interval):
-            #     return (frames_per_interval - computable)
-            #     # return -1
-            # else:
-            #     # return 1
-            #     return frames_per_interval
-        
-        else:
-            # self.update_battery_level(panel_energy - self.e_idle)
-            processable = int((actual_battery_energy + panel_energy) / self.e_frame)
-            # print(f"estimated: {frames_per_interval} - processed: {processable} - ")
-            # input("Press ENTER to continue...")
-            # print(f"negative delta: {processable - frames_per_interval}")
-            self.backlog -= processable
-            self.update_battery_level(panel_energy - (self.e_idle + (processable * self.e_frame)))
-            # return -1
-            return (processable - frames_per_interval)
-            
-        '''
 
     def get_info(self):
         return {
