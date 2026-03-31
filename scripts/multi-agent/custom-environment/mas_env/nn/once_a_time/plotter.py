@@ -154,8 +154,8 @@ def plot_backlogs(folder_path):
     
 # print(len(os.listdir(folder_path)))
 
-# plot_rewards(folder_path)
-# plot_framerate(folder_path)
+plot_rewards(folder_path)
+plot_framerate(folder_path)
 
-# plot_batteries(folder_path)
+plot_batteries(folder_path)
 plot_backlogs(folder_path)
