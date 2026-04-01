@@ -267,12 +267,14 @@ class CustomEnvironment(ParallelEnv):
             observations[agent] = np.array(obs, dtype=np.float32)
         
         infos = {a: {} for a in self.agents}
-        
-        if(seed == "fixed_winter"):
+                
+        if(self.seed == "fixed_winter"):
             self.episode = 355
-        elif(seed == "fixed_summer"):
+        elif(self.seed == "fixed_summer"):
             self.episode = 172
-        elif(seed == "linear"):
+        elif(self.seed == "average"):
+            self.episode = 80
+        elif(self.seed == "linear"):
             self.episode = (self.episode + 1) % 365
 
         return observations, infos
@@ -399,7 +401,7 @@ class CustomEnvironment(ParallelEnv):
         truncations = {a: False for a in self.agents}
         
         if(self.timestep == (self.max_steps - 1)):
-            self.episode = 355
+            # self.episode = 355
             truncations = {a: True for a in self.agents}
         
         self.timestep += 1

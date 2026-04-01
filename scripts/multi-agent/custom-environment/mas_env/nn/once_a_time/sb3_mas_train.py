@@ -597,7 +597,7 @@ class SB3_MAS_Train:
             temp = time.time() - temp
             times.append(temp)
 
-            print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - eps: {round(self.eps, 2)} - time: {round(temp, 5)}")
+            print(f"Episode {i + 1}/{self.num_episodes} - rewards: {rewards_episode} - eps: {round(self.eps, 2)} - time: {round(temp, 5)} - day: {self.env.episode}")
             
             for agent_id in range(0, self.num_agents):            
                 fs[agent_id].append(self.env.fs[agent_id] / self.env.max_steps)

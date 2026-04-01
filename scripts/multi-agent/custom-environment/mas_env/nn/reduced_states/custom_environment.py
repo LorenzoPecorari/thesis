@@ -402,7 +402,7 @@ class CustomEnvironment(ParallelEnv):
         truncations = {a: False for a in self.agents}
         
         if(self.timestep == (self.max_steps - 1)):
-            self.episode = 355
+            # self.episode = 355
             truncations = {a: True for a in self.agents}
         
         self.timestep += 1

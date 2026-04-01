@@ -19,7 +19,7 @@ proc_interval = 1 * 60
 proc_rate = 20
 arrival_rate = 15
 
-num_episodes = 1000
+num_episodes = 1001
 
 eps_init = 1.0
 eps_fin = 0.05
@@ -74,7 +74,7 @@ panel_surfaces = [
 power_idle = 2.6
 power_max = 6.0
 
-smart_node = 9
+smart_node = 0
 
 w = 1.0
 
@@ -82,7 +82,8 @@ train_freq = 16
 batch_size = 256
 
 mode = 'cuda'
-seed = "fixed_winter"
+# seed = "fixed_summer"
+seed = "average"
 
 if __name__ == "__main__":
     trainer1 = SB3_MAS_Train(
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     
     trainer1.train()
 
-    smart_node = 7
+    seed = "fixed_summer"
     
     trainer1 = SB3_MAS_Train(
         num_agents,
